@@ -1,0 +1,662 @@
+================================================================================
+          PREMIÈRE PRÉSENTATION DU MINI-PROJET — FOOTBALL BOOKING
+================================================================================
+
+Date : Octobre 2026
+Projet : Football Booking
+Groupe : [Noms des membres du groupe à compléter]
+
+================================================================================
+1. PRÉSENTATION DU PROJET
+================================================================================
+
+1.1 Nom du projet
+──────────────────
+Football Booking (Réservation de terrains de football)
+
+1.2 Contexte
+────────────
+Au Maroc et dans de nombreux pays, la réservation de terrains de football
+(synthétiques ou naturels) se fait encore majoritairement par téléphone ou
+en se déplaçant sur place. Les joueurs amateurs rencontrent des difficultés
+pour :
+  • trouver des terrains disponibles dans leur ville ;
+  • organiser des matchs entre amis ou avec des inconnus ;
+  • gérer les paiements de manière transparente ;
+  • constituer des équipes et inviter des joueurs.
+
+Il n'existe pas de plateforme unifiée permettant de couvrir l'ensemble de
+ces besoins dans un écosystème cohérent.
+
+1.3 Problème identifié
+───────────────────────
+  • La recherche de terrains disponibles est fastidieuse et peu transparente.
+  • L'organisation de matchs amateurs manque d'outils numériques adaptés.
+  • Les gestionnaires de terrains n'ont pas de solution centralisée pour gérer
+    leurs réservations, leurs horaires et leurs revenus.
+  • Les joueurs n'ont pas de moyen simple pour se retrouver, former des équipes
+    et rejoindre des matchs ouverts.
+
+1.4 Solution proposée
+─────────────────────
+Football Booking est une application web qui permet de :
+  • Rechercher et réserver des terrains de football en ligne, avec gestion
+    automatique des créneaux horaires et des conflits de réservation.
+  • Organiser et rejoindre des matchs (publics ou privés) avec gestion
+    automatique des places disponibles.
+  • Créer et gérer des équipes, inviter des joueurs, définir des rôles
+    (capitaine, membre).
+  • Gérer les paiements liés aux réservations.
+  • Offrir aux gestionnaires de terrains un espace dédié pour administrer
+    leurs infrastructures.
+
+1.5 Objectifs du projet
+───────────────────────
+  • Développer une API RESTful robuste pour la gestion complète du cycle
+    de réservation de terrains.
+  • Permettre l'organisation de matchs avec inscription en ligne des joueurs.
+  • Offrir un système de gestion d'équipes avec invitations et rôles.
+  • Implémenter un système de paiement sécurisé.
+  • Fournir une interface d'administration pour les gestionnaires de terrains.
+  • Assurer la sécurité des données utilisateurs (hachage des mots de passe,
+    validation des entrées).
+
+
+================================================================================
+2. UTILISATEURS ET ACTEURS
+================================================================================
+
+┌─────────────────────┬────────────────────────────────────────────────────────┐
+│ Acteur              │ Rôle                                                   │
+├─────────────────────┼────────────────────────────────────────────────────────┤
+│ Joueur (PLAYER)     │ Utilisateur principal. Peut rechercher des terrains,   │
+│                     │ réserver des créneaux, organiser ou rejoindre des      │
+│                     │ matchs, créer/rejoindre des équipes, gérer son profil  │
+│                     │ de joueur (position, niveau, disponibilité).           │
+├─────────────────────┼────────────────────────────────────────────────────────┤
+│ Gestionnaire de     │ Propriétaire ou gérant d'un ou plusieurs terrains.    │
+│ terrain             │ Peut ajouter, modifier et désactiver des terrains,    │
+│ (FIELD_MANAGER)     │ consulter les réservations de ses terrains, gérer les │
+│                     │ tarifs et les caractéristiques des terrains.           │
+├─────────────────────┼────────────────────────────────────────────────────────┤
+│ Administrateur      │ Supervise l'ensemble de la plateforme. Peut gérer     │
+│ (ADMIN)             │ les utilisateurs (activation, suspension, bannissement │
+│                     │ ), modérer le contenu, consulter les statistiques     │
+│                     │ globales et gérer les configurations système.          │
+├─────────────────────┼────────────────────────────────────────────────────────┤
+│ Système de          │ Système externe de traitement des paiements           │
+│ paiement (externe)  │ (Stripe, CMI, etc.) pour valider et traiter les       │
+│                     │ transactions financières liées aux réservations.       │
+└─────────────────────┴────────────────────────────────────────────────────────┘
+
+
+================================================================================
+3. FONCTIONNALITÉS PRINCIPALES
+================================================================================
+
+─── Joueur (PLAYER) ───
+
+  Authentification & Profil :
+    • Créer un compte (inscription avec email, mot de passe, nom, prénom)
+    • Se connecter / Se déconnecter
+    • Modifier son profil utilisateur
+    • Créer et modifier son profil de joueur (position préférée, niveau,
+      ville, bio, disponibilité)
+
+  Terrains & Réservation :
+    • Rechercher des terrains (par ville, type de terrain : 5v5, 7v7, 11v11)
+    • Consulter les détails d'un terrain (adresse, prix/heure, équipements,
+      surface, éclairage, vestiaires, parking)
+    • Réserver un créneau horaire sur un terrain
+    • Consulter ses réservations (historique et à venir)
+    • Annuler une réservation (avec motif)
+    • Suivre le statut de sa réservation (PENDING_PAYMENT → CONFIRMED →
+      COMPLETED / CANCELLED / EXPIRED)
+
+  Matchs :
+    • Créer un match (titre, description, date, durée, nombre max de joueurs,
+      public/privé, ville, terrain associé)
+    • Consulter les matchs publics à venir (filtrage par ville)
+    • Rejoindre un match ouvert (choix du côté d'équipe A ou B)
+    • Quitter un match
+    • Consulter la liste des participants d'un match
+    • Annuler un match (uniquement l'organisateur)
+
+  Équipes :
+    • Créer une équipe (nom, description, ville, nombre max de membres)
+    • Consulter les équipes existantes (par ville)
+    • Inviter un joueur à rejoindre une équipe
+    • Accepter ou décliner une invitation d'équipe
+    • Consulter les membres d'une équipe
+    • Quitter une équipe
+
+  Paiements :
+    • Effectuer un paiement pour une réservation
+    • Consulter son historique de paiements
+
+─── Gestionnaire de terrain (FIELD_MANAGER) ───
+
+    • Ajouter un nouveau terrain (nom, description, adresse, ville,
+      coordonnées GPS, type, surface, prix/heure, équipements)
+    • Modifier les informations d'un terrain
+    • Activer / Désactiver un terrain
+    • Consulter les réservations de ses terrains
+    • Consulter ses revenus
+
+─── Administrateur (ADMIN) ───
+
+    • Gérer les utilisateurs (consultation, modification de statut :
+      ACTIVE, INACTIVE, SUSPENDED, BANNED)
+    • Gérer les rôles des utilisateurs
+    • Consulter l'ensemble des terrains et réservations
+    • Accéder aux statistiques de la plateforme
+
+
+================================================================================
+4. PÉRIMÈTRE DU PROJET
+================================================================================
+
+4.1 Ce qui sera réalisé (Version 1 — MVP)
+──────────────────────────────────────────
+  ✅ Inscription et authentification des utilisateurs (avec hachage BCrypt)
+  ✅ CRUD complet des terrains de football
+  ✅ Système de réservation avec gestion des conflits horaires
+  ✅ Calcul automatique du prix en fonction de la durée
+  ✅ Expiration automatique des réservations non payées (15 min)
+  ✅ Création et gestion des matchs (publics/privés)
+  ✅ Inscription / désinscription aux matchs avec gestion des places
+  ✅ Gestion automatique du statut des matchs (OPEN → FULL → COMPLETED)
+  ✅ Création d'équipes, gestion des membres, système d'invitations
+  ✅ Profil de joueur (position, niveau, disponibilité, ville)
+  ✅ Système de paiement basique (enregistrement de la transaction)
+  ✅ API RESTful complète (endpoints documentés)
+  ✅ Migration de base de données automatisée (Flyway)
+  ✅ Validation des données (Bean Validation)
+  ✅ Gestion centralisée des erreurs
+
+4.2 Ce qui ne sera PAS réalisé (Extensions futures)
+────────────────────────────────────────────────────
+  ❌ Interface graphique frontend (uniquement l'API backend pour la V1)
+  ❌ Intégration réelle avec une passerelle de paiement (Stripe, CMI)
+  ❌ Système de notation / avis sur les terrains
+  ❌ Chat / messagerie en temps réel entre joueurs
+  ❌ Notifications push / email
+  ❌ Système de tournois et compétitions
+  ❌ Géolocalisation avancée et carte interactive
+  ❌ Application mobile (Android / iOS)
+  ❌ Système de recommandation de matchs basé sur le niveau
+  ❌ Statistiques avancées des joueurs (buts, assists, etc.)
+  ❌ Multi-langue (i18n)
+
+
+================================================================================
+5. PREMIÈRE ANALYSE FONCTIONNELLE
+================================================================================
+
+5.1 Diagramme de cas d'utilisation UML (description textuelle)
+──────────────────────────────────────────────────────────────
+
+                    ┌──────────────────────────────────────┐
+                    │         FOOTBALL BOOKING             │
+                    │              (Système)               │
+                    │                                      │
+  ┌────────┐        │  ┌──────────────────────────┐        │
+  │        │───────►│  │  S'inscrire               │       │
+  │        │───────►│  │  Se connecter             │       │
+  │        │───────►│  │  Gérer son profil joueur  │       │
+  │ JOUEUR │───────►│  │  Rechercher des terrains  │       │
+  │        │───────►│  │  Réserver un terrain      │───────┤──► Système de
+  │        │───────►│  │  Gérer ses réservations   │       │    paiement
+  │        │───────►│  │  Créer un match           │       │
+  │        │───────►│  │  Rejoindre un match       │       │
+  │        │───────►│  │  Créer une équipe         │       │
+  │        │───────►│  │  Inviter un joueur        │       │
+  │        │───────►│  │  Payer une réservation    │       │
+  └────────┘        │  └──────────────────────────┘        │
+                    │                                      │
+  ┌────────────┐    │  ┌──────────────────────────┐        │
+  │ GESTIONNAIRE│──►│  │  Ajouter un terrain       │       │
+  │ DE TERRAIN │──►│  │  Modifier un terrain      │       │
+  │            │──►│  │  Consulter réservations   │       │
+  │            │──►│  │  Gérer disponibilité      │       │
+  └────────────┘    │  └──────────────────────────┘        │
+                    │                                      │
+  ┌────────────┐    │  ┌──────────────────────────┐        │
+  │            │──►│  │  Gérer les utilisateurs   │       │
+  │   ADMIN    │──►│  │  Modérer le contenu       │       │
+  │            │──►│  │  Consulter statistiques   │       │
+  └────────────┘    │  └──────────────────────────┘        │
+                    └──────────────────────────────────────┘
+
+5.2 Scénarios importants
+─────────────────────────
+
+SCÉNARIO 1 : Réserver un terrain
+  Acteur principal : Joueur
+  Préconditions : Le joueur est authentifié
+  Scénario nominal :
+    1. Le joueur recherche des terrains par ville ou type (5v5, 7v7, 11v11).
+    2. Le système affiche la liste des terrains disponibles avec détails.
+    3. Le joueur sélectionne un terrain et un créneau horaire.
+    4. Le système vérifie qu'il n'y a pas de conflit avec d'autres réservations.
+    5. Le système calcule le prix total (prix/heure × durée).
+    6. Le système crée la réservation en statut PENDING_PAYMENT.
+    7. Le système démarre un délai d'expiration de 15 minutes.
+    8. Le joueur effectue le paiement.
+    9. Le système confirme la réservation (statut → CONFIRMED).
+  Scénarios alternatifs :
+    4a. Le créneau est déjà réservé → le système affiche un message d'erreur.
+    8a. Le joueur ne paie pas dans les 15 minutes → statut → EXPIRED.
+  Règles métier :
+    • La durée minimale est de 30 minutes.
+    • La durée maximale est de 4 heures.
+    • On ne peut pas réserver dans le passé.
+    • Le terrain doit être actif.
+
+SCÉNARIO 2 : Organiser et rejoindre un match
+  Acteur principal : Joueur (organisateur)
+  Préconditions : Le joueur est authentifié
+  Scénario nominal :
+    1. L'organisateur crée un match (titre, date, durée, nombre max joueurs).
+    2. L'organisateur peut associer un terrain et/ou une réservation existante.
+    3. Le système crée le match en statut OPEN.
+    4. L'organisateur est automatiquement inscrit comme participant (côté A,
+       statut CONFIRMED).
+    5. D'autres joueurs consultent les matchs publics à venir.
+    6. Un joueur rejoint le match en choisissant un côté (A ou B).
+    7. Le système vérifie que le match n'est pas complet.
+    8. Le système inscrit le joueur comme participant (statut REGISTERED).
+    9. Quand le nombre max de joueurs est atteint, le statut passe à FULL.
+  Scénarios alternatifs :
+    7a. Le match est complet → le système refuse l'inscription.
+    7b. Le joueur est déjà inscrit → le système affiche un message d'erreur.
+    *. L'organisateur peut annuler le match → statut → CANCELLED.
+
+SCÉNARIO 3 : Créer une équipe et inviter des joueurs
+  Acteur principal : Joueur (créateur)
+  Préconditions : Le joueur est authentifié
+  Scénario nominal :
+    1. Le créateur crée une équipe (nom, ville, nombre max de membres).
+    2. Le créateur est automatiquement ajouté comme CAPTAIN de l'équipe.
+    3. Le créateur invite d'autres joueurs à rejoindre l'équipe.
+    4. Le système crée une invitation en statut PENDING.
+    5. Le joueur invité accepte l'invitation.
+    6. Le système ajoute le joueur comme MEMBER de l'équipe.
+  Scénarios alternatifs :
+    5a. Le joueur invité décline → l'invitation passe en statut DECLINED.
+    3a. L'équipe est complète → le système refuse l'invitation.
+    3b. Le joueur est déjà membre → le système refuse l'invitation.
+
+5.3 Principales règles métier identifiées
+──────────────────────────────────────────
+  R1  — Un utilisateur ne peut pas réserver un créneau déjà occupé.
+  R2  — La durée de réservation est comprise entre 30 minutes et 4 heures.
+  R3  — Il est impossible de réserver dans le passé.
+  R4  — Un terrain doit être actif pour accepter des réservations.
+  R5  — Une réservation non payée expire automatiquement après 15 minutes.
+  R6  — Seul le propriétaire d'une réservation peut l'annuler.
+  R7  — Une réservation CANCELLED ou COMPLETED ne peut pas être re-annulée.
+  R8  — L'organisateur d'un match est automatiquement inscrit comme participant.
+  R9  — Un joueur ne peut pas s'inscrire deux fois au même match.
+  R10 — Un match complet (nombre max atteint) passe automatiquement en FULL.
+  R11 — Seul l'organisateur peut annuler un match.
+  R12 — Un joueur ne peut être invité qu'une seule fois dans la même équipe
+         (contrainte d'unicité team_id + invited_user_id).
+  R13 — Un joueur ne peut être membre d'une équipe qu'une seule fois
+         (contrainte d'unicité team_id + user_id).
+  R14 — Les mots de passe sont hachés avec BCrypt (jamais stockés en clair).
+  R15 — L'email de chaque utilisateur est unique dans le système.
+  R16 — Le prix total = prix_par_heure × durée_en_heures (arrondi à 2 décim.).
+  R17 — La devise par défaut est le MAD (Dirham marocain).
+
+
+================================================================================
+6. PREMIÈRE CONCEPTION — ARCHITECTURE
+================================================================================
+
+6.1 Architecture choisie : Architecture 3-tiers (MVC) classique
+───────────────────────────────────────────────────────────────
+
+  ┌─────────────────────────────────────────────────────────┐
+  │                   COUCHE PRÉSENTATION                   │
+  │               (API REST — JAX-RS Resources)             │
+  │                                                         │
+  │  AuthResource    BookingResource    FieldResource       │
+  │  MatchResource   PaymentResource    PlayerResource      │
+  │  TeamResource    UserResource                           │
+  └────────────────────────┬────────────────────────────────┘
+                           │
+                           ▼
+  ┌─────────────────────────────────────────────────────────┐
+  │                   COUCHE MÉTIER                         │
+  │               (Services — CDI Beans)                    │
+  │                                                         │
+  │  AuthService     BookingService     FieldService        │
+  │  MatchService    PaymentService     PlayerService       │
+  │  TeamService                                            │
+  └────────────────────────┬────────────────────────────────┘
+                           │
+                           ▼
+  ┌─────────────────────────────────────────────────────────┐
+  │                   COUCHE DONNÉES                        │
+  │          (JPA Entities — Jakarta Persistence)           │
+  │                                                         │
+  │  User            Booking            Field               │
+  │  Match           MatchParticipant   Payment             │
+  │  PlayerProfile   Team               TeamMember          │
+  │  TeamInvitation                                         │
+  └────────────────────────┬────────────────────────────────┘
+                           │
+                           ▼
+  ┌─────────────────────────────────────────────────────────┐
+  │              BASE DE DONNÉES (PostgreSQL)               │
+  │          Migrations automatisées via Flyway             │
+  └─────────────────────────────────────────────────────────┘
+
+6.2 Description des couches
+───────────────────────────
+  • Couche Présentation (Resources/Controllers) :
+    Expose les endpoints REST via JAX-RS. Reçoit les requêtes HTTP,
+    délègue le traitement aux services, et retourne les réponses JSON.
+    Inclut un filtre CORS (CorsFilter) pour les appels cross-origin.
+
+  • Couche Métier (Services) :
+    Contient toute la logique métier. Chaque service est un CDI Bean
+    (ApplicationScoped) avec gestion transactionnelle (@Transactional).
+    Les validations métier (conflits horaires, vérification de droits,
+    calculs de prix) sont effectuées dans cette couche.
+
+  • Couche Données (Entities) :
+    Modèle de données JPA mappé sur les tables PostgreSQL.
+    Utilise des NamedQueries pour les requêtes fréquentes.
+    Les migrations de schéma sont gérées par Flyway.
+
+  • Couche transversale :
+    - Gestion centralisée des exceptions (ApiExceptionMapper)
+    - Filtre CORS (CorsFilter)
+    - Migration automatique (FlywayMigrator)
+
+
+================================================================================
+7. DONNÉES — MODÈLE DE DONNÉES
+================================================================================
+
+7.1 Entités principales
+───────────────────────
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ ENTITÉ            │ DESCRIPTION                                            │
+├───────────────────┼────────────────────────────────────────────────────────┤
+│ User              │ Utilisateur inscrit (email, nom, prénom, téléphone,    │
+│                   │ rôle: PLAYER/FIELD_MANAGER/ADMIN,                     │
+│                   │ statut: ACTIVE/INACTIVE/SUSPENDED/BANNED)             │
+├───────────────────┼────────────────────────────────────────────────────────┤
+│ Field             │ Terrain de football (nom, adresse, ville, coordonnées │
+│                   │ GPS, type: 5v5/7v7/11v11, surface, prix/heure,       │
+│                   │ devise, éclairage, vestiaires, parking, intérieur)    │
+├───────────────────┼────────────────────────────────────────────────────────┤
+│ Booking           │ Réservation d'un terrain (utilisateur, terrain,       │
+│                   │ créneau horaire, montant, devise,                     │
+│                   │ statut: PENDING_PAYMENT/CONFIRMED/CANCELLED/          │
+│                   │ COMPLETED/EXPIRED, date d'expiration, motif annul.)   │
+├───────────────────┼────────────────────────────────────────────────────────┤
+│ Match             │ Match de football (organisateur, terrain, réservation, │
+│                   │ titre, date, durée, nombre max joueurs,               │
+│                   │ statut: OPEN/FULL/IN_PROGRESS/COMPLETED/CANCELLED,    │
+│                   │ public/privé, ville)                                  │
+├───────────────────┼────────────────────────────────────────────────────────┤
+│ MatchParticipant  │ Participant à un match (match, joueur, côté A/B,      │
+│                   │ statut: REGISTERED/CONFIRMED/DECLINED)                │
+├───────────────────┼────────────────────────────────────────────────────────┤
+│ Payment           │ Paiement d'une réservation (utilisateur, réservation, │
+│                   │ montant, devise, méthode: CREDIT_CARD/CASH/STRIPE/   │
+│                   │ CMI, statut: PENDING/COMPLETED/FAILED/REFUNDED,       │
+│                   │ référence transaction)                                │
+├───────────────────┼────────────────────────────────────────────────────────┤
+│ PlayerProfile     │ Profil sportif du joueur (position préférée, niveau,  │
+│                   │ ville, bio, disponibilité)                            │
+├───────────────────┼────────────────────────────────────────────────────────┤
+│ Team              │ Équipe de football (créateur, nom, description, ville,│
+│                   │ nombre max de membres, actif/inactif)                 │
+├───────────────────┼────────────────────────────────────────────────────────┤
+│ TeamMember        │ Membre d'une équipe (équipe, joueur, rôle: CAPTAIN/   │
+│                   │ MEMBER, position, date d'adhésion)                    │
+├───────────────────┼────────────────────────────────────────────────────────┤
+│ TeamInvitation    │ Invitation à rejoindre une équipe (équipe, joueur     │
+│                   │ invité, invité par, statut: PENDING/ACCEPTED/DECLINED)│
+└───────────────────┴────────────────────────────────────────────────────────┘
+
+
+7.2 Diagramme de classes simplifié (relations)
+──────────────────────────────────────────────
+
+  User (1) ──────────────────── (0..1) PlayerProfile
+    │
+    │ (1) ──────────────────── (*) Booking
+    │ (1) ──────────────────── (*) Payment
+    │ (1) ──────────────────── (*) Field          [en tant qu'owner]
+    │ (1) ──────────────────── (*) Match          [en tant qu'organizer]
+    │ (1) ──────────────────── (*) Team           [en tant que creator]
+    │ (1) ──────────────────── (*) TeamMember
+    │ (1) ──────────────────── (*) MatchParticipant
+    │ (1) ──────────────────── (*) TeamInvitation  [invitedUser / invitedBy]
+    │
+  Field (1) ─────────────────── (*) Booking
+  Field (1) ─────────────────── (*) Match
+    │
+  Booking (1) ───────────────── (*) Payment
+  Booking (1) ───────────────── (0..1) Match
+    │
+  Match (1) ─────────────────── (*) MatchParticipant
+    │
+  Team (1) ──────────────────── (*) TeamMember
+  Team (1) ──────────────────── (*) TeamInvitation
+
+
+7.3 Schéma de la base de données (tables principales)
+─────────────────────────────────────────────────────
+
+  TABLE users :
+    id (UUID, PK), email (VARCHAR UNIQUE), password_hash, first_name,
+    last_name, phone, role (ENUM), status (ENUM), created_at, updated_at
+
+  TABLE fields :
+    id (UUID, PK), owner_id (FK → users), name, description, address,
+    city, postal_code, latitude, longitude, phone, field_type,
+    surface_type, capacity, price_per_hour, currency, indoor,
+    has_lights, has_locker_room, has_parking, active, created_at, updated_at
+
+  TABLE bookings :
+    id (UUID, PK), user_id (FK → users), field_id (FK → fields),
+    start_at, end_at, total_amount, currency, status (ENUM), notes,
+    expires_at, cancelled_at, cancellation_reason, created_at, updated_at
+
+  TABLE matches :
+    id (UUID, PK), organizer_id (FK → users), booking_id (FK → bookings),
+    field_id (FK → fields), title, description, match_date,
+    duration_minutes, max_players, status, is_public, city,
+    created_at, updated_at
+
+  TABLE match_participants :
+    id (UUID, PK), match_id (FK → matches), user_id (FK → users),
+    status, team_side, joined_at
+    UNIQUE(match_id, user_id)
+
+  TABLE payments :
+    id (UUID, PK), user_id (FK → users), booking_id (FK → bookings),
+    amount, currency, status (ENUM), payment_method, transaction_ref,
+    paid_at, created_at
+
+  TABLE player_profiles :
+    id (UUID, PK), user_id (FK → users, UNIQUE), preferred_position,
+    skill_level, city, bio, available, created_at, updated_at
+
+  TABLE teams :
+    id (UUID, PK), creator_id (FK → users), name, description, city,
+    max_members, active, created_at, updated_at
+
+  TABLE team_members :
+    id (UUID, PK), team_id (FK → teams), user_id (FK → users),
+    role, position, joined_at
+    UNIQUE(team_id, user_id)
+
+  TABLE team_invitations :
+    id (UUID, PK), team_id (FK → teams), invited_user_id (FK → users),
+    invited_by_id (FK → users), status, created_at
+    UNIQUE(team_id, invited_user_id)
+
+
+================================================================================
+8. TECHNOLOGIES ENVISAGÉES
+================================================================================
+
+┌────────────────────────┬──────────────────────────────────────────────────────┐
+│ Couche                 │ Technologie                                         │
+├────────────────────────┼──────────────────────────────────────────────────────┤
+│ Backend                │ Java 17 (Jakarta EE 10)                             │
+├────────────────────────┼──────────────────────────────────────────────────────┤
+│ Serveur d'application  │ WildFly (serveur d'applications Jakarta EE)         │
+├────────────────────────┼──────────────────────────────────────────────────────┤
+│ API REST               │ JAX-RS (Jakarta RESTful Web Services) 4.0           │
+├────────────────────────┼──────────────────────────────────────────────────────┤
+│ Injection de dépendance│ CDI (Contexts and Dependency Injection) 4.1         │
+├────────────────────────┼──────────────────────────────────────────────────────┤
+│ Persistance / ORM      │ JPA (Jakarta Persistence API) 3.2 / Hibernate      │
+├────────────────────────┼──────────────────────────────────────────────────────┤
+│ Base de données        │ PostgreSQL (driver JDBC 42.7.4)                     │
+├────────────────────────┼──────────────────────────────────────────────────────┤
+│ Migration de schéma    │ Flyway 10.21.0                                      │
+├────────────────────────┼──────────────────────────────────────────────────────┤
+│ Validation             │ Bean Validation (Jakarta Validation) 3.1            │
+├────────────────────────┼──────────────────────────────────────────────────────┤
+│ Sérialisation JSON     │ JSON-B (Jakarta JSON Binding) 3.0 + JSON-P 2.1     │
+├────────────────────────┼──────────────────────────────────────────────────────┤
+│ Sécurité               │ BCrypt (favre-lib 0.10.2) pour le hachage des       │
+│                        │ mots de passe + Jakarta Security API 4.0            │
+├────────────────────────┼──────────────────────────────────────────────────────┤
+│ Build                  │ Apache Maven (maven-war-plugin 3.5.1)               │
+├────────────────────────┼──────────────────────────────────────────────────────┤
+│ Tests unitaires        │ JUnit 5 (Jupiter 5.10.2) + Mockito 5.11.0          │
+├────────────────────────┼──────────────────────────────────────────────────────┤
+│ Tests d'API            │ Postman (collection incluse dans le projet)         │
+├────────────────────────┼──────────────────────────────────────────────────────┤
+│ Frontend (V2)          │ À définir (React, Angular, ou Thymeleaf)            │
+├────────────────────────┼──────────────────────────────────────────────────────┤
+│ Conteneurisation (V2)  │ Docker + Docker Compose                             │
+└────────────────────────┴──────────────────────────────────────────────────────┘
+
+
+================================================================================
+9. PLAN DE TRAVAIL (Octobre → Fin Décembre 2026)
+================================================================================
+
+┌────┬───────────────────────────────────┬──────────────────┬────────────────────┐
+│ #  │ Étape                             │ Durée prévue     │ Période            │
+├────┼───────────────────────────────────┼──────────────────┼────────────────────┤
+│ 1  │ Analyse et spécifications         │ 1 semaine        │ 01 Oct — 07 Oct    │
+│    │ (cas d'utilisation, règles métier,│                  │                    │
+│    │  scénarios, modèle de données)    │                  │                    │
+├────┼───────────────────────────────────┼──────────────────┼────────────────────┤
+│ 2  │ Conception détaillée              │ 1 semaine        │ 08 Oct — 14 Oct    │
+│    │ (architecture, diagrammes UML,    │                  │                    │
+│    │  design de l'API REST)            │                  │                    │
+├────┼───────────────────────────────────┼──────────────────┼────────────────────┤
+│ 3  │ Développement Backend — Core      │ 2 semaines       │ 15 Oct — 28 Oct    │
+│    │ (entités JPA, services,           │                  │                    │
+│    │  endpoints REST, auth)            │                  │                    │
+├────┼───────────────────────────────────┼──────────────────┼────────────────────┤
+│ 4  │ Développement Backend — Avancé    │ 2 semaines       │ 29 Oct — 11 Nov    │
+│    │ (matchs, équipes, invitations,    │                  │                    │
+│    │  paiements, logique métier)       │                  │                    │
+├────┼───────────────────────────────────┼──────────────────┼────────────────────┤
+│ 5  │ Développement Frontend            │ 2 semaines       │ 12 Nov — 25 Nov    │
+│    │ (interface utilisateur,           │                  │                    │
+│    │  intégration avec l'API)          │                  │                    │
+├────┼───────────────────────────────────┼──────────────────┼────────────────────┤
+│ 6  │ Intégration et Tests              │ 1.5 semaines     │ 26 Nov — 07 Déc    │
+│    │ (tests unitaires, tests d'API     │                  │                    │
+│    │  Postman, corrections de bugs)    │                  │                    │
+├────┼───────────────────────────────────┼──────────────────┼────────────────────┤
+│ 7  │ Déploiement et Documentation      │ 1.5 semaines     │ 08 Déc — 18 Déc    │
+│    │ (documentation API, rapport,      │                  │                    │
+│    │  déploiement, soutenance)         │                  │                    │
+└────┴───────────────────────────────────┴──────────────────┴────────────────────┘
+
+
+9.2 Répartition des tâches (exemple à adapter selon le groupe)
+──────────────────────────────────────────────────────────────
+
+┌───────────────────┬────────────────────────────────────────────────────────────┐
+│ Membre            │ Tâches principales                                        │
+├───────────────────┼────────────────────────────────────────────────────────────┤
+│ Membre 1          │ Entités JPA (User, Field, Booking), BookingService,       │
+│                   │ FieldService, AuthService, migration Flyway,              │
+│                   │ configuration serveur, sécurité                           │
+├───────────────────┼────────────────────────────────────────────────────────────┤
+│ Membre 2          │ Entités JPA (Match, MatchParticipant, Payment),           │
+│                   │ MatchService, PaymentService, PlayerService,              │
+│                   │ tests unitaires, collection Postman                       │
+├───────────────────┼────────────────────────────────────────────────────────────┤
+│ Membre 3          │ Entités JPA (Team, TeamMember, TeamInvitation),           │
+│                   │ TeamService, développement Frontend,                      │
+│                   │ intégration API, documentation                            │
+├───────────────────┼────────────────────────────────────────────────────────────┤
+│ Tous              │ Analyse, conception, revue de code, tests d'intégration,  │
+│                   │ préparation de la présentation                            │
+└───────────────────┴────────────────────────────────────────────────────────────┘
+
+
+================================================================================
+10. LIVRABLES
+================================================================================
+
+  ✅ Présentation PowerPoint/PDF (ce document sert de base)
+  ✅ Diagramme de cas d'utilisation (section 5.1)
+  ✅ Première architecture (section 6)
+  ✅ Premier modèle de données (section 7)
+  ✅ Liste des fonctionnalités (section 3)
+  ✅ Planning prévisionnel (section 9)
+
+  Le code de l'API backend est en cours de développement et sera présenté
+  lors de la prochaine itération.
+
+
+================================================================================
+11. RÉSUMÉ — RÉPONSES AUX QUESTIONS CLÉS
+================================================================================
+
+  ► Quel problème cherchez-vous à résoudre ?
+    La difficulté pour les joueurs amateurs de trouver et réserver des terrains
+    de football en ligne, d'organiser des matchs, et de constituer des équipes.
+    Le manque d'outils numériques pour les gestionnaires de terrains.
+
+  ► Pour quels utilisateurs ?
+    • Les joueurs amateurs de football (recherche, réservation, matchs, équipes)
+    • Les gestionnaires/propriétaires de terrains (gestion, revenus)
+    • Les administrateurs de la plateforme (supervision, modération)
+
+  ► Quelles fonctionnalités proposez-vous ?
+    Réservation de terrains avec gestion des conflits, organisation de matchs
+    publics/privés avec inscription en ligne, gestion d'équipes avec système
+    d'invitations, paiement en ligne, profil de joueur sportif, administration.
+
+  ► Comment envisagez-vous le fonctionnement du système ?
+    Architecture 3-tiers (MVC) avec API RESTful en Java/Jakarta EE déployée
+    sur WildFly, base de données PostgreSQL, migration automatique Flyway,
+    sécurisation par hachage BCrypt.
+
+  ► Quelles sont les principales contraintes et difficultés ?
+    • Gestion des conflits de réservation (créneaux horaires qui se chevauchent)
+    • Gestion de la concurrence (réservations simultanées)
+    • Expiration automatique des réservations non payées
+    • Gestion cohérente des statuts (machine à états pour Booking, Match)
+    • Sécurité : authentification, autorisation par rôle, protection CORS
+    • Intégration future avec un vrai système de paiement
+
+  ► Quelles technologies et quelle architecture envisagez-vous ?
+    Java 17, Jakarta EE 10 (JAX-RS, CDI, JPA, Bean Validation), WildFly,
+    PostgreSQL, Flyway, BCrypt, Maven. Architecture 3-tiers classique.
+
+================================================================================
+                              FIN DU DOCUMENT
+================================================================================

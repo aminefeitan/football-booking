@@ -1,0 +1,901 @@
+{
+	"info": {
+		"_postman_id": "football-booking-api-collection",
+		"name": "Football Booking Platform API",
+		"description": "Collection complète pour tester l'API Jakarta EE de réservation de terrains de football, équipes et matchs.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8080/football-booking-1.0-SNAPSHOT/api/v1",
+			"type": "string"
+		},
+		{
+			"key": "userId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "fieldId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "bookingId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "teamId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "matchId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "invitationId",
+			"value": "",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "1. Authentification",
+			"item": [
+				{
+					"name": "Register Player",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData && jsonData.user && jsonData.user.id) {",
+									"    pm.collectionVariables.set('userId', jsonData.user.id);",
+									"    console.log('User ID saved: ' + jsonData.user.id);",
+									"}",
+									"pm.test('Status code is 201', function () {",
+									"    pm.response.to.have.status(201);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"karim.benzema@example.com\",\n  \"password\": \"Secret123!\",\n  \"firstName\": \"Karim\",\n  \"lastName\": \"Benzema\",\n  \"phone\": \"+212612345678\",\n  \"role\": \"PLAYER\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/register",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"auth",
+								"register"
+							]
+						}
+					}
+				},
+				{
+					"name": "Register Field Owner / Manager",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"owner.arena@example.com\",\n  \"password\": \"Secret123!\",\n  \"firstName\": \"Yassine\",\n  \"lastName\": \"Bounou\",\n  \"phone\": \"+212698765432\",\n  \"role\": \"FIELD_MANAGER\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/register",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"auth",
+								"register"
+							]
+						}
+					}
+				},
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData && jsonData.user && jsonData.user.id) {",
+									"    pm.collectionVariables.set('userId', jsonData.user.id);",
+									"}",
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"karim.benzema@example.com\",\n  \"password\": \"Secret123!\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"auth",
+								"login"
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Current User Profile",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "X-User-Id",
+								"value": "{{userId}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/auth/me",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"auth",
+								"me"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "2. Terrains de Football (Fields)",
+			"item": [
+				{
+					"name": "Create Football Field",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData && jsonData.id) {",
+									"    pm.collectionVariables.set('fieldId', jsonData.id);",
+									"    console.log('Field ID saved: ' + jsonData.id);",
+									"}",
+									"pm.test('Status code is 201', function () {",
+									"    pm.response.to.have.status(201);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "X-User-Id",
+								"value": "{{userId}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Oasis Football Arena - Terrain 1\",\n  \"description\": \"Terrain synthétique dernière génération FIFA Quality Pro\",\n  \"address\": \"120 Boulevard de l'Oasis\",\n  \"city\": \"Casablanca\",\n  \"postalCode\": \"20100\",\n  \"latitude\": 33.5583,\n  \"longitude\": -7.6321,\n  \"phone\": \"+212522112233\",\n  \"fieldType\": \"5v5\",\n  \"surfaceType\": \"Synthétique\",\n  \"capacity\": 10,\n  \"pricePerHour\": 350.00,\n  \"currency\": \"MAD\",\n  \"indoor\": false,\n  \"hasLights\": true,\n  \"hasLockerRoom\": true,\n  \"hasParking\": true\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/fields",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"fields"
+							]
+						}
+					}
+				},
+				{
+					"name": "List All Fields",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/fields",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"fields"
+							]
+						}
+					}
+				},
+				{
+					"name": "Search Fields (Filters: city, fieldType, hasLights, maxPrice)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/fields?city=Casablanca&fieldType=5v5&hasLights=true&maxPrice=400",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"fields"
+							],
+							"query": [
+								{
+									"key": "city",
+									"value": "Casablanca"
+								},
+								{
+									"key": "fieldType",
+									"value": "5v5"
+								},
+								{
+									"key": "hasLights",
+									"value": "true"
+								},
+								{
+									"key": "maxPrice",
+									"value": "400"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Field By ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/fields/{{fieldId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"fields",
+								"{{fieldId}}"
+							]
+						}
+					}
+				},
+				{
+					"name": "Update Field",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Oasis Football Arena - Terrain 1 (Rénové)\",\n  \"description\": \"Nouveau gazon synthétique posé en 2026\",\n  \"address\": \"120 Boulevard de l'Oasis\",\n  \"city\": \"Casablanca\",\n  \"postalCode\": \"20100\",\n  \"latitude\": 33.5583,\n  \"longitude\": -7.6321,\n  \"phone\": \"+212522112233\",\n  \"fieldType\": \"5v5\",\n  \"surfaceType\": \"Synthétique Pro\",\n  \"capacity\": 10,\n  \"pricePerHour\": 380.00,\n  \"currency\": \"MAD\",\n  \"indoor\": false,\n  \"hasLights\": true,\n  \"hasLockerRoom\": true,\n  \"hasParking\": true\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/fields/{{fieldId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"fields",
+								"{{fieldId}}"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "3. Réservations (Bookings)",
+			"item": [
+				{
+					"name": "Create Booking",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData && jsonData.id) {",
+									"    pm.collectionVariables.set('bookingId', jsonData.id);",
+									"    console.log('Booking ID saved: ' + jsonData.id);",
+									"}",
+									"pm.test('Status code is 201', function () {",
+									"    pm.response.to.have.status(201);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "X-User-Id",
+								"value": "{{userId}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"fieldId\": \"{{fieldId}}\",\n  \"startAt\": \"2026-10-25T19:00:00Z\",\n  \"endAt\": \"2026-10-25T20:30:00Z\",\n  \"notes\": \"Match 5v5 entre collègues\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/bookings",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"bookings"
+							]
+						}
+					}
+				},
+				{
+					"name": "Get My Bookings",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "X-User-Id",
+								"value": "{{userId}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/bookings/me",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"bookings",
+								"me"
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Booking Details",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/bookings/{{bookingId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"bookings",
+								"{{bookingId}}"
+							]
+						}
+					}
+				},
+				{
+					"name": "Cancel Booking",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "X-User-Id",
+								"value": "{{userId}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"reason\": \"Empêchement de dernière minute\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/bookings/{{bookingId}}/cancel",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"bookings",
+								"{{bookingId}}",
+								"cancel"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "4. Paiements (Payments)",
+			"item": [
+				{
+					"name": "Pay & Confirm Booking",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "X-User-Id",
+								"value": "{{userId}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"bookingId\": \"{{bookingId}}\",\n  \"paymentMethod\": \"CREDIT_CARD\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/payments",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"payments"
+							]
+						}
+					}
+				},
+				{
+					"name": "Get My Payment Receipts",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "X-User-Id",
+								"value": "{{userId}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/payments/my",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"payments",
+								"my"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "5. Équipes & Invitations (Teams)",
+			"item": [
+				{
+					"name": "Create Football Team",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData && jsonData.id) {",
+									"    pm.collectionVariables.set('teamId', jsonData.id);",
+									"    console.log('Team ID saved: ' + jsonData.id);",
+									"}",
+									"pm.test('Status code is 201', function () {",
+									"    pm.response.to.have.status(201);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "X-User-Id",
+								"value": "{{userId}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Atlas Lions FC\",\n  \"description\": \"Équipe amateur de football à 7 sur Casablanca\",\n  \"city\": \"Casablanca\",\n  \"maxMembers\": 14\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/teams",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"teams"
+							]
+						}
+					}
+				},
+				{
+					"name": "List Football Teams",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/teams?city=Casablanca",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"teams"
+							],
+							"query": [
+								{
+									"key": "city",
+									"value": "Casablanca"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Team By ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/teams/{{teamId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"teams",
+								"{{teamId}}"
+							]
+						}
+					}
+				},
+				{
+					"name": "Invite Player to Team",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData && jsonData.id) {",
+									"    pm.collectionVariables.set('invitationId', jsonData.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "X-User-Id",
+								"value": "{{userId}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"invitedUserId\": \"{{userId}}\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/teams/{{teamId}}/invitations",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"teams",
+								"{{teamId}}",
+								"invitations"
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Pending Invitations for Player",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "X-User-Id",
+								"value": "{{userId}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/teams/invitations/pending",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"teams",
+								"invitations",
+								"pending"
+							]
+						}
+					}
+				},
+				{
+					"name": "Accept Team Invitation",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "X-User-Id",
+								"value": "{{userId}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/teams/invitations/{{invitationId}}/accept",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"teams",
+								"invitations",
+								"{{invitationId}}",
+								"accept"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "4. Matchs (Matchmaking)",
+			"item": [
+				{
+					"name": "Create Match Event",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData && jsonData.id) {",
+									"    pm.collectionVariables.set('matchId', jsonData.id);",
+									"    console.log('Match ID saved: ' + jsonData.id);",
+									"}",
+									"pm.test('Status code is 201', function () {",
+									"    pm.response.to.have.status(201);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "X-User-Id",
+								"value": "{{userId}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"fieldId\": \"{{fieldId}}\",\n  \"bookingId\": \"{{bookingId}}\",\n  \"title\": \"Grand Match 5v5 - Vendredi Soir\",\n  \"description\": \"Match amical bon niveau, ramenez vos crampons stabilisés\",\n  \"matchDate\": \"2026-10-25T19:00:00Z\",\n  \"durationMinutes\": 90,\n  \"maxPlayers\": 10,\n  \"isPublic\": true,\n  \"city\": \"Casablanca\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/matches",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"matches"
+							]
+						}
+					}
+				},
+				{
+					"name": "List Upcoming Matches",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/matches?city=Casablanca",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"matches"
+							],
+							"query": [
+								{
+									"key": "city",
+									"value": "Casablanca"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Join Match (Select Team Side A or B)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "X-User-Id",
+								"value": "{{userId}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"teamSide\": \"B\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/matches/{{matchId}}/join",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"matches",
+								"{{matchId}}",
+								"join"
+							]
+						}
+					}
+				},
+				{
+					"name": "Leave Match",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "X-User-Id",
+								"value": "{{userId}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/matches/{{matchId}}/leave",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"matches",
+								"{{matchId}}",
+								"leave"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "7. Profils Joueurs (Player Profiles)",
+			"item": [
+				{
+					"name": "Get My Player Profile",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "X-User-Id",
+								"value": "{{userId}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/players/me",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"players",
+								"me"
+							]
+						}
+					}
+				},
+				{
+					"name": "Update Player Profile (Position, Skill, City)",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "X-User-Id",
+								"value": "{{userId}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"preferredPosition\": \"Milieu Offensif (10)\",\n  \"skillLevel\": \"AVANCE\",\n  \"city\": \"Casablanca\",\n  \"bio\": \"Disponible tous les soirs en semaine et week-end pour du 5v5 ou 7v7\",\n  \"available\": true\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/players/me",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"players",
+								"me"
+							]
+						}
+					}
+				},
+				{
+					"name": "Find Available Players in City (Matchmaking)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/players/available?city=Casablanca",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"players",
+								"available"
+							],
+							"query": [
+								{
+									"key": "city",
+									"value": "Casablanca"
+								}
+							]
+						}
+					}
+				}
+			]
+		}
+	]
+}
