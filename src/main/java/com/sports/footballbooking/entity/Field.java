@@ -29,11 +29,7 @@ import java.util.UUID;
         @NamedQuery(name = "Field.findByOwner",
                 query = "SELECT f FROM Field f WHERE f.owner.id = :ownerId AND f.active = true ORDER BY f.createdAt DESC")
 })
-public class Field {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID id;
+public class Field extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "owner_id")
@@ -107,12 +103,6 @@ public class Field {
     @Column(nullable = false)
     private boolean active = true;
 
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private OffsetDateTime createdAt;
-
-    @Column(name = "updated_at", nullable = false)
-    private OffsetDateTime updatedAt;
-
     public Field() {
         // Required by JPA
     }
@@ -126,21 +116,8 @@ public class Field {
         this.active = true;
     }
 
-    @PrePersist
-    protected void onCreate() {
-        OffsetDateTime now = OffsetDateTime.now();
-        this.createdAt = now;
-        this.updatedAt = now;
-    }
-
-    @PreUpdate
-    protected void onUpdate() {
-        this.updatedAt = OffsetDateTime.now();
-    }
-
     // ==================== Getters ====================
 
-    public UUID getId() { return id; }
     public User getOwner() { return owner; }
     public String getName() { return name; }
     public String getDescription() { return description; }
@@ -160,12 +137,8 @@ public class Field {
     public boolean isHasLockerRoom() { return hasLockerRoom; }
     public boolean isHasParking() { return hasParking; }
     public boolean isActive() { return active; }
-    public OffsetDateTime getCreatedAt() { return createdAt; }
-    public OffsetDateTime getUpdatedAt() { return updatedAt; }
 
     // ==================== Setters ====================
-
-    public void setId(UUID id) { this.id = id; }
     public void setOwner(User owner) { this.owner = owner; }
     public void setName(String name) { this.name = name; }
     public void setDescription(String description) { this.description = description; }

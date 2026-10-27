@@ -8,7 +8,6 @@ import jakarta.validation.constraints.Size;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
-import java.util.UUID;
 
 /**
  * Represents a payment transaction for a football pitch booking.
@@ -23,7 +22,7 @@ import java.util.UUID;
         @NamedQuery(name = "Payment.findByBooking",
                 query = "SELECT p FROM Payment p WHERE p.booking.id = :bookingId")
 })
-public class Payment {
+public class Payment extends BaseEntity {
 
     public enum Status {
         PENDING,
@@ -31,10 +30,6 @@ public class Payment {
         FAILED,
         REFUNDED
     }
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID id;
 
     @NotNull
     @ManyToOne(fetch = FetchType.EAGER, optional = false)
@@ -71,9 +66,6 @@ public class Payment {
     @Column(name = "paid_at")
     private OffsetDateTime paidAt;
 
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private OffsetDateTime createdAt;
-
     public Payment() {}
 
     public Payment(User user, Booking booking, BigDecimal amount, String paymentMethod) {
@@ -83,11 +75,6 @@ public class Payment {
         this.paymentMethod = paymentMethod;
         this.currency = (booking != null && booking.getCurrency() != null) ? booking.getCurrency() : "MAD";
         this.status = Status.PENDING;
-    }
-
-    @PrePersist
-    protected void onCreate() {
-        this.createdAt = OffsetDateTime.now();
     }
 
     public void markCompleted(String transactionRef) {
@@ -102,7 +89,6 @@ public class Payment {
     }
 
     // Getters and Setters
-    public UUID getId() { return id; }
     public User getUser() { return user; }
     public void setUser(User user) { this.user = user; }
     public Booking getBooking() { return booking; }
@@ -119,5 +105,4 @@ public class Payment {
     public void setTransactionRef(String transactionRef) { this.transactionRef = transactionRef; }
     public OffsetDateTime getPaidAt() { return paidAt; }
     public void setPaidAt(OffsetDateTime paidAt) { this.paidAt = paidAt; }
-    public OffsetDateTime getCreatedAt() { return createdAt; }
 }

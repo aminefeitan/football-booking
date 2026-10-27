@@ -2,6 +2,7 @@ package com.sports.footballbooking.service;
 
 import com.sports.footballbooking.entity.Booking;
 import com.sports.footballbooking.entity.Field;
+import com.sports.footballbooking.entity.Player;
 import com.sports.footballbooking.entity.User;
 import com.sports.footballbooking.exception.BusinessException;
 import jakarta.persistence.EntityManager;
@@ -47,15 +48,11 @@ class BookingServiceTest {
         userId = UUID.randomUUID();
         fieldId = UUID.randomUUID();
 
-        testUser = new User("player@example.com", "hashed_pwd", "Karim", "Benzema");
-        java.lang.reflect.Field idField = User.class.getDeclaredField("id");
-        idField.setAccessible(true);
-        idField.set(testUser, userId);
+        testUser = new Player("player@example.com", "hashed_pwd", "Karim", "Benzema");
+        testUser.setId(userId);
 
         testField = new Field("Terrain A", "Casablanca", "5v5", new BigDecimal("300.00"));
-        java.lang.reflect.Field fieldIdField = Field.class.getDeclaredField("id");
-        fieldIdField.setAccessible(true);
-        fieldIdField.set(testField, fieldId);
+        testField.setId(fieldId);
     }
 
     @Test
@@ -137,9 +134,7 @@ class BookingServiceTest {
         OffsetDateTime end = start.plusHours(1);
 
         Booking booking = new Booking(testUser, testField, start, end, new BigDecimal("300.00"));
-        java.lang.reflect.Field bIdField = Booking.class.getDeclaredField("id");
-        bIdField.setAccessible(true);
-        bIdField.set(booking, bookingId);
+        booking.setId(bookingId);
 
         when(em.find(Booking.class, bookingId)).thenReturn(booking);
         when(em.merge(any(Booking.class))).thenAnswer(i -> i.getArgument(0));

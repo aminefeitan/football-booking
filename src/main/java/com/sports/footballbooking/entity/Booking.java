@@ -30,7 +30,7 @@ import java.util.UUID;
                 query = "SELECT b FROM Booking b WHERE b.status = com.sports.footballbooking.entity.Booking.Status.PENDING_PAYMENT " +
                         "AND b.expiresAt IS NOT NULL AND b.expiresAt < :now")
 })
-public class Booking {
+public class Booking extends BaseEntity {
 
     public enum Status {
         PENDING_PAYMENT,
@@ -39,10 +39,6 @@ public class Booking {
         COMPLETED,
         EXPIRED
     }
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID id;
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "user_id", nullable = false)
@@ -86,12 +82,6 @@ public class Booking {
     @Column(name = "cancellation_reason", columnDefinition = "TEXT")
     private String cancellationReason;
 
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private OffsetDateTime createdAt;
-
-    @Column(name = "updated_at", nullable = false)
-    private OffsetDateTime updatedAt;
-
     protected Booking() {
         // Required by JPA
     }
@@ -107,19 +97,13 @@ public class Booking {
         this.status = Status.PENDING_PAYMENT;
     }
 
+    @Override
     @PrePersist
     protected void onCreate() {
-        OffsetDateTime now = OffsetDateTime.now();
-        this.createdAt = now;
-        this.updatedAt = now;
+        super.onCreate();
         if (this.expiresAt == null && this.status == Status.PENDING_PAYMENT) {
-            this.expiresAt = now.plusMinutes(15);
+            this.expiresAt = getCreatedAt().plusMinutes(15);
         }
-    }
-
-    @PreUpdate
-    protected void onUpdate() {
-        this.updatedAt = OffsetDateTime.now();
     }
 
     public void confirm() {
@@ -155,7 +139,6 @@ public class Booking {
 
     // ==================== Getters ====================
 
-    public UUID getId() { return id; }
     public User getUser() { return user; }
     public Field getField() { return field; }
     public OffsetDateTime getStartAt() { return startAt; }
@@ -167,8 +150,6 @@ public class Booking {
     public OffsetDateTime getExpiresAt() { return expiresAt; }
     public OffsetDateTime getCancelledAt() { return cancelledAt; }
     public String getCancellationReason() { return cancellationReason; }
-    public OffsetDateTime getCreatedAt() { return createdAt; }
-    public OffsetDateTime getUpdatedAt() { return updatedAt; }
 
     // ==================== Setters ====================
 

@@ -1,7 +1,6 @@
 package com.sports.footballbooking.service;
 
-import com.sports.footballbooking.entity.PlayerProfile;
-import com.sports.footballbooking.entity.User;
+import com.sports.footballbooking.entity.Player;
 import com.sports.footballbooking.exception.NotFoundException;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.persistence.EntityManager;
@@ -30,47 +29,33 @@ public class PlayerService {
 
     // ==================== Méthodes ====================
 
-    public PlayerProfile getOrCreateProfile(UUID userId) {
-        User user = em.find(User.class, userId);
-        if (user == null) throw new NotFoundException("User", userId);
-
-        List<PlayerProfile> results = em.createNamedQuery("PlayerProfile.findByUserId", PlayerProfile.class)
-                .setParameter("userId", userId)
-                .getResultList();
-
-        if (!results.isEmpty()) return results.get(0);
-
-        PlayerProfile profile = new PlayerProfile(user);
-        em.persist(profile);
-        return profile;
+    public Player getPlayer(UUID userId) {
+        Player player = em.find(Player.class, userId);
+        if (player == null) throw new NotFoundException("Player", userId);
+        return player;
     }
 
-    public PlayerProfile updateProfile(UUID userId, UpdateProfileRequest request) {
-        User user = em.find(User.class, userId);
-        if (user == null) throw new NotFoundException("User", userId);
-
-        List<PlayerProfile> results = em.createNamedQuery("PlayerProfile.findByUserId", PlayerProfile.class)
-                .setParameter("userId", userId)
-                .getResultList();
-
-        PlayerProfile profile = results.isEmpty() ? new PlayerProfile(user) : results.get(0);
-
-        if (request.preferredPosition != null) profile.setPreferredPosition(request.preferredPosition);
-        if (request.skillLevel != null) profile.setSkillLevel(request.skillLevel);
-        if (request.city != null) profile.setCity(request.city);
-        if (request.bio != null) profile.setBio(request.bio);
-        if (request.available != null) profile.setAvailable(request.available);
-
-        if (profile.getId() == null) {
-            em.persist(profile);
-        } else {
-            profile = em.merge(profile);
-        }
-        return profile;
+    /**
+     * Backward-compatible alias for getPlayer.
+     */
+    public Player getOrCreateProfile(UUID userId) {
+        return getPlayer(userId);
     }
 
-    public List<PlayerProfile> searchPlayers(String city) {
-        return em.createNamedQuery("PlayerProfile.findAvailableByCity", PlayerProfile.class)
+    public Player updateProfile(UUID userId, UpdateProfileRequest request) {
+        Player player = getPlayer(userId);
+
+        if (request.preferredPosition != null) player.setPreferredPosition(request.preferredPosition);
+        if (request.skillLevel != null) player.setSkillLevel(request.skillLevel);
+        if (request.city != null) player.setCity(request.city);
+        if (request.bio != null) player.setBio(request.bio);
+        if (request.available != null) player.setAvailable(request.available);
+
+        return em.merge(player);
+    }
+
+    public List<Player> searchPlayers(String city) {
+        return em.createNamedQuery("Player.findAvailableByCity", Player.class)
                 .setParameter("city", city)
                 .getResultList();
     }

@@ -1,7 +1,9 @@
 package com.sports.footballbooking.service;
 
 import at.favre.lib.crypto.bcrypt.BCrypt;
-import com.sports.footballbooking.entity.PlayerProfile;
+import com.sports.footballbooking.entity.Admin;
+import com.sports.footballbooking.entity.FieldManager;
+import com.sports.footballbooking.entity.Player;
 import com.sports.footballbooking.entity.User;
 import com.sports.footballbooking.exception.BusinessException;
 import com.sports.footballbooking.exception.NotFoundException;
@@ -58,17 +60,20 @@ public class AuthService {
         }
 
         String passwordHash = BCrypt.withDefaults().hashToString(12, request.password.toCharArray());
-        User user = new User(request.email, passwordHash, request.firstName, request.lastName);
+        User.Role role = request.role != null ? request.role : User.Role.PLAYER;
+        User user;
+
+        switch (role) {
+            case PLAYER -> user = new Player(request.email, passwordHash, request.firstName, request.lastName);
+            case FIELD_MANAGER -> user = new FieldManager(request.email, passwordHash, request.firstName, request.lastName);
+            case ADMIN -> user = new Admin(request.email, passwordHash, request.firstName, request.lastName);
+            default -> throw new BusinessException("Rôle non supporté: " + role);
+        }
+
         if (request.phone != null) user.setPhone(request.phone);
-        if (request.role != null) user.setRole(request.role);
 
         em.persist(user);
-        em.flush(); // pour obtenir l'ID généré
-
-        if (user.getRole() == User.Role.PLAYER) {
-            PlayerProfile profile = new PlayerProfile(user);
-            em.persist(profile);
-        }
+        em.flush();
 
         return new AuthResponse("Bearer-" + user.getId(), user);
     }

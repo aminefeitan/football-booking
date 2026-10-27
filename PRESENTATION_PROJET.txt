@@ -341,16 +341,17 @@ SCÉNARIO 3 : Créer une équipe et inviter des joueurs
   │                   COUCHE DONNÉES                        │
   │          (JPA Entities — Jakarta Persistence)           │
   │                                                         │
-  │  User            Booking            Field               │
-  │  Match           MatchParticipant   Payment             │
-  │  PlayerProfile   Team               TeamMember          │
-  │  TeamInvitation                                         │
+  │  BaseEntity (@MappedSuperclass)                         │
+  │  User (JOINED) ──► Player, FieldManager, Admin          │
+  │  Field             Booking            Payment           │
+  │  Match             MatchParticipant   Team              │
+  │  TeamMember        TeamInvitation                       │
   └────────────────────────┬────────────────────────────────┘
                            │
                            ▼
   ┌─────────────────────────────────────────────────────────┐
   │              BASE DE DONNÉES (PostgreSQL)               │
-  │          Migrations automatisées via Flyway             │
+  │     Schéma de zéro : schema.sql / V1__schema.sql        │
   └─────────────────────────────────────────────────────────┘
 
 6.2 Description des couches
@@ -387,9 +388,19 @@ SCÉNARIO 3 : Créer une équipe et inviter des joueurs
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │ ENTITÉ            │ DESCRIPTION                                            │
 ├───────────────────┼────────────────────────────────────────────────────────┤
-│ User              │ Utilisateur inscrit (email, nom, prénom, téléphone,    │
-│                   │ rôle: PLAYER/FIELD_MANAGER/ADMIN,                     │
-│                   │ statut: ACTIVE/INACTIVE/SUSPENDED/BANNED)             │
+│ BaseEntity        │ Superclasse @MappedSuperclass regroupant id (UUID),    │
+│                   │ createdAt, updatedAt et callbacks @PrePersist/@PreUpdate│
+├───────────────────┼────────────────────────────────────────────────────────┤
+│ User              │ Entité racine abstraite avec héritage JPA JOINED       │
+│                   │ (email, password_hash, nom, prénom, téléphone, statut) │
+├───────────────────┼────────────────────────────────────────────────────────┤
+│ Player            │ Joueur (hérite de User) : position préférée, niveau,   │
+│                   │ ville, bio, disponibilité                              │
+├───────────────────┼────────────────────────────────────────────────────────┤
+│ FieldManager      │ Gestionnaire (hérite de User) : raison sociale,        │
+│                   │ numéro fiscal, collection de terrains gérés            │
+├───────────────────┼────────────────────────────────────────────────────────┤
+│ Admin             │ Administrateur (hérite de User) : département          │
 ├───────────────────┼────────────────────────────────────────────────────────┤
 │ Field             │ Terrain de football (nom, adresse, ville, coordonnées │
 │                   │ GPS, type: 5v5/7v7/11v11, surface, prix/heure,       │
@@ -411,10 +422,7 @@ SCÉNARIO 3 : Créer une équipe et inviter des joueurs
 │ Payment           │ Paiement d'une réservation (utilisateur, réservation, │
 │                   │ montant, devise, méthode: CREDIT_CARD/CASH/STRIPE/   │
 │                   │ CMI, statut: PENDING/COMPLETED/FAILED/REFUNDED,       │
-│                   │ référence transaction)                                │
-├───────────────────┼────────────────────────────────────────────────────────┤
-│ PlayerProfile     │ Profil sportif du joueur (position préférée, niveau,  │
-│                   │ ville, bio, disponibilité)                            │
+│                   │ référence transaction, paidAt)                        │
 ├───────────────────┼────────────────────────────────────────────────────────┤
 │ Team              │ Équipe de football (créateur, nom, description, ville,│
 │                   │ nombre max de membres, actif/inactif)                 │
@@ -430,17 +438,24 @@ SCÉNARIO 3 : Créer une équipe et inviter des joueurs
 7.2 Diagramme de classes simplifié (relations)
 ──────────────────────────────────────────────
 
-  User (1) ──────────────────── (0..1) PlayerProfile
+  BaseEntity (@MappedSuperclass : id, createdAt, updatedAt)
+    ▲
+    ├── Field, Booking, Team, Payment, Match, TeamInvitation
     │
-    │ (1) ──────────────────── (*) Booking
-    │ (1) ──────────────────── (*) Payment
-    │ (1) ──────────────────── (*) Field          [en tant qu'owner]
-    │ (1) ──────────────────── (*) Match          [en tant qu'organizer]
-    │ (1) ──────────────────── (*) Team           [en tant que creator]
-    │ (1) ──────────────────── (*) TeamMember
-    │ (1) ──────────────────── (*) MatchParticipant
-    │ (1) ──────────────────── (*) TeamInvitation  [invitedUser / invitedBy]
-    │
+    └── User (@Inheritance JOINED)
+          ▲
+          ├── Player       (attributs sportifs : position, niveau, ville, bio, dispo)
+          ├── FieldManager (businessName, taxNumber, managedFields)
+          └── Admin        (department)
+
+  User (1) ──────────────────── (*) Booking
+  User (1) ──────────────────── (*) Payment
+  User (1) ──────────────────── (*) Field          [en tant qu'owner]
+  User (1) ──────────────────── (*) Match          [en tant qu'organizer]
+  User (1) ──────────────────── (*) Team           [en tant que creator]
+  User (1) ──────────────────── (*) TeamMember
+  User (1) ──────────────────── (*) MatchParticipant
+  User (1) ──────────────────── (*) TeamInvitation  [invitedUser / invitedBy]
   Field (1) ─────────────────── (*) Booking
   Field (1) ─────────────────── (*) Match
     │
@@ -482,14 +497,35 @@ SCÉNARIO 3 : Créer une équipe et inviter des joueurs
     status, team_side, joined_at
     UNIQUE(match_id, user_id)
 
+  TABLE users :
+    id (UUID, PK), email (UNIQUE), password_hash, first_name, last_name,
+    phone, role (ENUM), status (ENUM), created_at, updated_at
+
+  TABLE players :
+    id (UUID, PK, FK → users ON DELETE CASCADE), preferred_position,
+    skill_level, city, bio, available
+
+  TABLE field_managers :
+    id (UUID, PK, FK → users ON DELETE CASCADE), business_name, tax_number
+
+  TABLE admins :
+    id (UUID, PK, FK → users ON DELETE CASCADE), department
+
+  TABLE fields :
+    id (UUID, PK), owner_id (FK → users), name, description, address,
+    city, postal_code, latitude, longitude, phone, field_type, surface_type,
+    capacity, price_per_hour, currency, indoor, has_lights, has_locker_room,
+    has_parking, active, created_at, updated_at
+
+  TABLE bookings :
+    id (UUID, PK), user_id (FK → users), field_id (FK → fields),
+    start_at, end_at, total_amount, currency, status (ENUM), notes,
+    expires_at, cancelled_at, cancellation_reason, created_at, updated_at
+
   TABLE payments :
     id (UUID, PK), user_id (FK → users), booking_id (FK → bookings),
     amount, currency, status (ENUM), payment_method, transaction_ref,
-    paid_at, created_at
-
-  TABLE player_profiles :
-    id (UUID, PK), user_id (FK → users, UNIQUE), preferred_position,
-    skill_level, city, bio, available, created_at, updated_at
+    paid_at, created_at, updated_at
 
   TABLE teams :
     id (UUID, PK), creator_id (FK → users), name, description, city,
@@ -502,7 +538,7 @@ SCÉNARIO 3 : Créer une équipe et inviter des joueurs
 
   TABLE team_invitations :
     id (UUID, PK), team_id (FK → teams), invited_user_id (FK → users),
-    invited_by_id (FK → users), status, created_at
+    invited_by_id (FK → users), status, created_at, updated_at
     UNIQUE(team_id, invited_user_id)
 
 

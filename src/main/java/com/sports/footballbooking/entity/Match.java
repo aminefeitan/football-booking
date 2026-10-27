@@ -25,11 +25,7 @@ import java.util.UUID;
         @NamedQuery(name = "Match.findByCity",
                 query = "SELECT m FROM Match m WHERE m.isPublic = true AND LOWER(m.city) = LOWER(:city) AND m.matchDate >= :now ORDER BY m.matchDate ASC")
 })
-public class Match {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID id;
+public class Match extends BaseEntity {
 
     @NotNull
     @ManyToOne(fetch = FetchType.EAGER, optional = false)
@@ -79,12 +75,6 @@ public class Match {
     @OneToMany(mappedBy = "match", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<MatchParticipant> participants = new ArrayList<>();
 
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private OffsetDateTime createdAt;
-
-    @Column(name = "updated_at", nullable = false)
-    private OffsetDateTime updatedAt;
-
     public Match() {}
 
     public Match(User organizer, String title, OffsetDateTime matchDate, int durationMinutes) {
@@ -96,20 +86,7 @@ public class Match {
         this.isPublic = true;
     }
 
-    @PrePersist
-    protected void onCreate() {
-        OffsetDateTime now = OffsetDateTime.now();
-        this.createdAt = now;
-        this.updatedAt = now;
-    }
-
-    @PreUpdate
-    protected void onUpdate() {
-        this.updatedAt = OffsetDateTime.now();
-    }
-
     // Getters and Setters
-    public UUID getId() { return id; }
     public User getOrganizer() { return organizer; }
     public void setOrganizer(User organizer) { this.organizer = organizer; }
     public Booking getBooking() { return booking; }
@@ -134,6 +111,4 @@ public class Match {
     public void setCity(String city) { this.city = city; }
     public List<MatchParticipant> getParticipants() { return participants; }
     public void setParticipants(List<MatchParticipant> participants) { this.participants = participants; }
-    public OffsetDateTime getCreatedAt() { return createdAt; }
-    public OffsetDateTime getUpdatedAt() { return updatedAt; }
 }

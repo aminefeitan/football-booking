@@ -5,9 +5,6 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
-import java.time.OffsetDateTime;
-import java.util.UUID;
-
 /**
  * Represents an invitation for a player to join a football team.
  */
@@ -24,11 +21,7 @@ import java.util.UUID;
         @NamedQuery(name = "TeamInvitation.findByTeamAndUser",
                 query = "SELECT i FROM TeamInvitation i WHERE i.team.id = :teamId AND i.invitedUser.id = :userId")
 })
-public class TeamInvitation {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID id;
+public class TeamInvitation extends BaseEntity {
 
     @NotNull
     @ManyToOne(fetch = FetchType.EAGER, optional = false)
@@ -53,9 +46,6 @@ public class TeamInvitation {
     @Column(nullable = false, length = 20)
     private String status = "PENDING"; // PENDING, ACCEPTED, DECLINED
 
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private OffsetDateTime createdAt;
-
     public TeamInvitation() {}
 
     public TeamInvitation(Team team, User invitedUser, User invitedBy) {
@@ -63,11 +53,6 @@ public class TeamInvitation {
         this.invitedUser = invitedUser;
         this.invitedBy = invitedBy;
         this.status = "PENDING";
-    }
-
-    @PrePersist
-    protected void onCreate() {
-        this.createdAt = OffsetDateTime.now();
     }
 
     public void accept() {
@@ -79,7 +64,6 @@ public class TeamInvitation {
     }
 
     // Getters and Setters
-    public UUID getId() { return id; }
     public Team getTeam() { return team; }
     public void setTeam(Team team) { this.team = team; }
     public User getInvitedUser() { return invitedUser; }
@@ -88,5 +72,4 @@ public class TeamInvitation {
     public void setInvitedBy(User invitedBy) { this.invitedBy = invitedBy; }
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
-    public OffsetDateTime getCreatedAt() { return createdAt; }
 }

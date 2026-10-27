@@ -25,11 +25,7 @@ import java.util.UUID;
         @NamedQuery(name = "Team.findByCreator",
                 query = "SELECT t FROM Team t WHERE t.creator.id = :creatorId AND t.active = true ORDER BY t.createdAt DESC")
 })
-public class Team {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID id;
+public class Team extends BaseEntity {
 
     @NotNull
     @ManyToOne(fetch = FetchType.EAGER, optional = false)
@@ -58,12 +54,6 @@ public class Team {
     @OneToMany(mappedBy = "team", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<TeamMember> members = new ArrayList<>();
 
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private OffsetDateTime createdAt;
-
-    @Column(name = "updated_at", nullable = false)
-    private OffsetDateTime updatedAt;
-
     public Team() {}
 
     public Team(User creator, String name, String city, int maxMembers) {
@@ -74,20 +64,7 @@ public class Team {
         this.active = true;
     }
 
-    @PrePersist
-    protected void onCreate() {
-        OffsetDateTime now = OffsetDateTime.now();
-        this.createdAt = now;
-        this.updatedAt = now;
-    }
-
-    @PreUpdate
-    protected void onUpdate() {
-        this.updatedAt = OffsetDateTime.now();
-    }
-
     // Getters and Setters
-    public UUID getId() { return id; }
     public User getCreator() { return creator; }
     public void setCreator(User creator) { this.creator = creator; }
     public String getName() { return name; }
@@ -102,6 +79,4 @@ public class Team {
     public void setActive(boolean active) { this.active = active; }
     public List<TeamMember> getMembers() { return members; }
     public void setMembers(List<TeamMember> members) { this.members = members; }
-    public OffsetDateTime getCreatedAt() { return createdAt; }
-    public OffsetDateTime getUpdatedAt() { return updatedAt; }
 }

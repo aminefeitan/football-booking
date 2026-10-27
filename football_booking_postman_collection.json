@@ -818,7 +818,7 @@
 			]
 		},
 		{
-			"name": "7. Profils Joueurs (Player Profiles)",
+			"name": "7. Joueurs (Players - Héritage User)",
 			"item": [
 				{
 					"name": "Get My Player Profile",
