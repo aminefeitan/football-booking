@@ -2,6 +2,7 @@ package com.sports.footballbooking.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import jakarta.json.bind.annotation.JsonbTransient;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Size;
 
@@ -27,6 +28,7 @@ public class FieldManager extends User {
     private String taxNumber;
 
     @JsonIgnore
+    @JsonbTransient
     @OneToMany(mappedBy = "owner", fetch = FetchType.LAZY)
     private List<Field> managedFields = new ArrayList<>();
 
@@ -61,10 +63,14 @@ public class FieldManager extends User {
         this.taxNumber = taxNumber;
     }
 
+    @JsonIgnore
+    @JsonbTransient
     public List<Field> getManagedFields() {
         return managedFields;
     }
 
+    @JsonIgnore
+    @JsonbTransient
     public void setManagedFields(List<Field> managedFields) {
         this.managedFields = managedFields;
     }

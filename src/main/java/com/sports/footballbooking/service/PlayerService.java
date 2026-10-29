@@ -55,6 +55,18 @@ public class PlayerService {
     }
 
     public List<Player> searchPlayers(String city) {
+        if (city == null || city.isBlank()) {
+            return em.createNamedQuery("Player.findAll", Player.class).getResultList();
+        }
+        return em.createNamedQuery("Player.findByCity", Player.class)
+                .setParameter("city", city)
+                .getResultList();
+    }
+
+    public List<Player> searchAvailablePlayers(String city) {
+        if (city == null || city.isBlank()) {
+            return em.createNamedQuery("Player.findAllAvailable", Player.class).getResultList();
+        }
         return em.createNamedQuery("Player.findAvailableByCity", Player.class)
                 .setParameter("city", city)
                 .getResultList();
