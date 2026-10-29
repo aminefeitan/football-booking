@@ -13,10 +13,14 @@ import jakarta.validation.constraints.Size;
 @DiscriminatorValue("PLAYER")
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 @NamedQueries({
+        @NamedQuery(name = "Player.findAll",
+                query = "SELECT p FROM Player p ORDER BY p.lastName"),
+        @NamedQuery(name = "Player.findByCity",
+                query = "SELECT p FROM Player p WHERE LOWER(p.city) = LOWER(:city) ORDER BY p.lastName"),
         @NamedQuery(name = "Player.findAllAvailable",
                 query = "SELECT p FROM Player p WHERE p.available = true ORDER BY p.lastName"),
         @NamedQuery(name = "Player.findAvailableByCity",
-                query = "SELECT p FROM Player p WHERE p.available = true AND (:city IS NULL OR LOWER(p.city) = LOWER(:city)) ORDER BY p.lastName")
+                query = "SELECT p FROM Player p WHERE p.available = true AND LOWER(p.city) = LOWER(:city) ORDER BY p.lastName")
 })
 public class Player extends User {
 

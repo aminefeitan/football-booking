@@ -27,7 +27,7 @@ public class PlayerResource {
     @GET
     @Path("/available")
     public Response searchAvailablePlayers(@QueryParam("city") String city) {
-        List<Player> players = playerService.searchPlayers(city);
+        List<Player> players = playerService.searchAvailablePlayers(city);
         return Response.ok(players).build();
     }
 

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import jakarta.json.bind.annotation.JsonbTransient;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -56,6 +57,7 @@ public abstract class User extends BaseEntity {
     private String email;
 
     @JsonIgnore
+    @JsonbTransient
     @NotBlank
     @Column(name = "password_hash", nullable = false, length = 255)
     private String passwordHash;
@@ -104,7 +106,12 @@ public abstract class User extends BaseEntity {
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }
 
+    @JsonIgnore
+    @JsonbTransient
     public String getPasswordHash() { return passwordHash; }
+
+    @JsonIgnore
+    @JsonbTransient
     public void setPasswordHash(String passwordHash) { this.passwordHash = passwordHash; }
 
     public String getFirstName() { return firstName; }
