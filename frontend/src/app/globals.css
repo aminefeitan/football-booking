@@ -1,0 +1,102 @@
+@import "tailwindcss";
+
+/* ─── Tailwind v4 : toutes les couleurs et polices déclarées ici ─── */
+@theme {
+  /* Palette FootBook */
+  --color-nuit-pelouse: #0B2E22;
+  --color-vert-projecteur: #C8FF3D;
+  --color-orange-sifflet: #FF5B1F;
+  --color-craie: #F5F0E1;
+  --color-encre: #0A0F0D;
+  --color-jaune-carton: #FFD23F;
+
+  /* Famille de polices */
+  --font-family-display: "Big Shoulders Display", "Anton", Impact, sans-serif;
+  --font-family-body: "Instrument Sans", system-ui, sans-serif;
+  --font-family-mono: "DM Mono", ui-monospace, monospace;
+
+  /* Ombres néo-brutalistes */
+  --shadow-brutal: 4px 4px 0 #0A0F0D;
+  --shadow-brutal-lg: 6px 6px 0 #0A0F0D;
+  --shadow-brutal-xl: 8px 8px 0 #0A0F0D;
+  --shadow-brutal-green: 4px 4px 0 #C8FF3D;
+  --shadow-brutal-orange: 4px 4px 0 #FF5B1F;
+}
+
+/* ─── Google Fonts ─────────────────────────────────────────────── */
+@import url("https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;0,700&family=DM+Mono:wght@400;500&display=swap");
+
+/* ─── Variables CSS globales ────────────────────────────────────── */
+:root {
+  --font-display: "Big Shoulders Display", Impact, sans-serif;
+  --font-body: "Instrument Sans", system-ui, sans-serif;
+  --font-mono: "DM Mono", ui-monospace, monospace;
+}
+
+/* ─── Base Reset ────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+
+html {
+  font-family: var(--font-body);
+  -webkit-text-size-adjust: 100%;
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100dvh;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  background-color: #0B2E22;
+  color: #F5F0E1;
+}
+
+/* ─── Focus ─────────────────────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid #C8FF3D;
+  outline-offset: 2px;
+}
+
+/* ─── Selection ─────────────────────────────────────────────────── */
+::selection {
+  background: #C8FF3D;
+  color: #0A0F0D;
+}
+
+/* ─── Utilitaires font manuels ──────────────────────────────────── */
+.font-display {
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
+}
+.font-body  { font-family: var(--font-body); }
+.font-mono  { font-family: var(--font-mono); }
+
+/* ─── Shadow utilitaires ────────────────────────────────────────── */
+.shadow-brutal    { box-shadow: 4px 4px 0 #0A0F0D; }
+.shadow-brutal-lg { box-shadow: 6px 6px 0 #0A0F0D; }
+.shadow-brutal-xl { box-shadow: 8px 8px 0 #0A0F0D; }
+
+/* ─── Marquee ───────────────────────────────────────────────────── */
+@keyframes marquee {
+  0%   { transform: translateX(0%); }
+  100% { transform: translateX(-50%); }
+}
+.animate-marquee { animation: marquee 35s linear infinite; }
+
+/* ─── Scrollbar ─────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: #0B2E22; }
+::-webkit-scrollbar-thumb { background: #C8FF3D; }
+
+/* ─── Espacement nav mobile ─────────────────────────────────────── */
+@media (max-width: 768px) {
+  main { padding-bottom: 72px; }
+}
+
+/* ─── Reduced motion ─────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+  .animate-marquee { animation: none; }
+}

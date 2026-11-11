@@ -1,0 +1,25 @@
+<component name="ArtifactManager">
+  <artifact type="exploded-war" name="football-booking:war exploded">
+    <output-path>$PROJECT_DIR$/out/artifacts/football_booking_war_exploded</output-path>
+    <root id="root">
+      <element id="directory" name="WEB-INF">
+        <element id="directory" name="classes">
+          <element id="module-output" name="football-booking" />
+        </element>
+        <element id="directory" name="lib">
+          <element id="library" level="project" name="Maven: org.flywaydb:flyway-core:10.21.0" />
+          <element id="library" level="project" name="Maven: com.fasterxml.jackson.dataformat:jackson-dataformat-toml:2.15.2" />
+          <element id="library" level="project" name="Maven: com.fasterxml.jackson.core:jackson-databind:2.15.2" />
+          <element id="library" level="project" name="Maven: com.fasterxml.jackson.core:jackson-core:2.15.2" />
+          <element id="library" level="project" name="Maven: com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.15.2" />
+          <element id="library" level="project" name="Maven: org.flywaydb:flyway-database-postgresql:10.21.0" />
+          <element id="library" level="project" name="Maven: org.postgresql:postgresql:42.7.4" />
+          <element id="library" level="project" name="Maven: org.checkerframework:checker-qual:3.42.0" />
+          <element id="library" level="project" name="Maven: at.favre.lib:bcrypt:0.10.2" />
+          <element id="library" level="project" name="Maven: at.favre.lib:bytes:1.5.0" />
+        </element>
+      </element>
+      <element id="javaee-facet-resources" facet="football-booking/web/Web" />
+    </root>
+  </artifact>
+</component>

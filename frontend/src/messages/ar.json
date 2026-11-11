@@ -1,0 +1,49 @@
+{
+  "common": {
+    "appName": "فوتبوك",
+    "search": "بحث",
+    "reserve": "حجز",
+    "cancel": "إلغاء",
+    "confirm": "تأكيد",
+    "back": "رجوع",
+    "loading": "جار التحميل...",
+    "pricePerHour": "{price}/ساعة",
+    "perHour": "لكل ساعة"
+  },
+  "nav": {
+    "home": "الرئيسية",
+    "fields": "الملاعب",
+    "myBookings": "حجوزاتي",
+    "dashboard": "لوحة التحكم",
+    "auth": "تسجيل الدخول"
+  },
+  "home": {
+    "heroTitle1": "احجز",
+    "heroTitle2": "ملعبك",
+    "heroSubtitle": "حجز ملاعب كرة القدم",
+    "cityPlaceholder": "باريس، ليون، مرسيليا...",
+    "allTypes": "جميع الأنواع",
+    "popularTitle": "الملاعب الأكثر طلباً",
+    "managerCtaTitle": "هل تدير ملعباً؟",
+    "managerCtaDesc": "انضم إلى المنصة وأدر حجوزاتك في الوقت الفعلي."
+  },
+  "fields": {
+    "title": "الملاعب المتاحة",
+    "filter": "تصفية",
+    "surface": "الأرضية",
+    "lighting": "إنارة",
+    "indoor": "مغطى",
+    "free": "متاح",
+    "reserved": "محجوز",
+    "lastPlaces": "الأماكن الأخيرة"
+  },
+  "booking": {
+    "step1": "الملعب",
+    "step2": "الموعد",
+    "step3": "الدفع",
+    "confirmTitle": "تم تأكيد الحجز!",
+    "ticketNotice": "أظهر هذه التذكرة عند الاستقبال",
+    "inviteTeam": "ادعُ فريقك"
+  }
+}
+

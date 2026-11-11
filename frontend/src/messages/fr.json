@@ -1,0 +1,49 @@
+{
+  "common": {
+    "appName": "FootBook",
+    "search": "Chercher",
+    "reserve": "Réserver",
+    "cancel": "Annuler",
+    "confirm": "Confirmer",
+    "back": "Retour",
+    "loading": "Chargement...",
+    "pricePerHour": "{price}/h",
+    "perHour": "par heure"
+  },
+  "nav": {
+    "home": "Accueil",
+    "fields": "Terrains",
+    "myBookings": "Mes réservations",
+    "dashboard": "Dashboard",
+    "auth": "Connexion"
+  },
+  "home": {
+    "heroTitle1": "Réserve ton",
+    "heroTitle2": "terrain",
+    "heroSubtitle": "Réservation de terrains de football",
+    "cityPlaceholder": "Paris, Lyon, Marseille...",
+    "allTypes": "Tous types",
+    "popularTitle": "Terrains populaires",
+    "managerCtaTitle": "Tu gères un terrain ?",
+    "managerCtaDesc": "Rejoins la plateforme et gère tes réservations en temps réel."
+  },
+  "fields": {
+    "title": "Terrains disponibles",
+    "filter": "Filtres",
+    "surface": "Surface",
+    "lighting": "Éclairé",
+    "indoor": "Couvert",
+    "free": "Libre",
+    "reserved": "Réservé",
+    "lastPlaces": "Dernières places"
+  },
+  "booking": {
+    "step1": "Terrain",
+    "step2": "Créneau",
+    "step3": "Paiement",
+    "confirmTitle": "Réservation confirmée !",
+    "ticketNotice": "Présentez ce billet à l'accueil",
+    "inviteTeam": "Inviter ton équipe"
+  }
+}
+
