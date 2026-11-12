@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<persistence xmlns="https://jakarta.ee/xml/ns/jakartaee"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee https://jakarta.ee/xml/ns/jakartaee/persistence_3_2.xsd"
+             version="3.2">
+
+    <persistence-unit name="footballBookingPU" transaction-type="JTA">
+        <jta-data-source>java:jboss/datasources/FootballBookingDS</jta-data-source>
+
+        <properties>
+            <!-- Schema managed by Flyway -->
+            <property name="hibernate.hbm2ddl.auto" value="none"/>
+
+            <!-- SQL logging -->
+            <property name="hibernate.show_sql" value="true"/>
+            <property name="hibernate.format_sql" value="true"/>
+
+            <!-- Timezone handling -->
+            <property name="hibernate.jdbc.time_zone" value="UTC"/>
+        </properties>
+    </persistence-unit>
+</persistence>

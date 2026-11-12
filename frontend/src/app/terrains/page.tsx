@@ -1,153 +1,342 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, useMemo, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { motion, AnimatePresence } from "framer-motion";
-import { Funnel, List, SquaresFour, X } from "@phosphor-icons/react";
+import { motion } from "framer-motion";
+import {
+  MagnifyingGlass,
+  Funnel,
+  List,
+  SquaresFour,
+  X,
+  Lightning,
+  House,
+  ArrowsDownUp,
+  MapPin,
+} from "@phosphor-icons/react";
 import { FieldCard } from "@/components/ui/FieldCard";
 import { Button } from "@/components/ui/Button";
 import { getFields, type FieldFilters } from "@/services/fields.service";
 import { cn } from "@/lib/utils";
 
-const TYPE_OPTS  = [
-  { v: "FIVE_ASIDE",   l: "5 vs 5"   },
-  { v: "SEVEN_ASIDE",  l: "7 vs 7"   },
-  { v: "ELEVEN_ASIDE", l: "11 vs 11" },
-];
-const PRICE_OPTS = [
-  { v: 50,  l: "≤ 50€/h"  },
-  { v: 80,  l: "≤ 80€/h"  },
-  { v: 120, l: "≤ 120€/h" },
+const FORMAT_OPTIONS = [
+  { value: "", label: "Tous formats" },
+  { value: "FIVE_ASIDE", label: "5 vs 5" },
+  { value: "SEVEN_ASIDE", label: "7 vs 7" },
+  { value: "ELEVEN_ASIDE", label: "11 vs 11" },
 ];
 
-function PillBtn({ active, color = "green", onClick, children }: {
-  active?: boolean; color?: "green" | "yellow" | "orange"; onClick: () => void; children: React.ReactNode;
-}) {
-  const colorMap = {
-    green:  active ? "border-vert-projecteur bg-vert-projecteur text-encre"   : "",
-    yellow: active ? "border-jaune-carton bg-jaune-carton text-encre"         : "",
-    orange: active ? "border-orange-sifflet bg-orange-sifflet text-craie"     : "",
-  };
-  return (
-    <button onClick={onClick}
-      className={cn(
-        "border-2 px-3 py-1 font-mono font-bold text-xs uppercase tracking-widest transition-all",
-        active ? colorMap[color] : "border-craie/20 text-craie/50 hover:border-craie/40 hover:text-craie/70"
-      )}
-    >
-      {children}
-    </button>
-  );
-}
+const PRICE_OPTIONS = [
+  { value: 0, label: "Tous prix" },
+  { value: 60, label: "≤ 60€/h" },
+  { value: 90, label: "≤ 90€/h" },
+  { value: 120, label: "≤ 120€/h" },
+];
 
 function TerrainsContent() {
   const router = useRouter();
-  const sp = useSearchParams();
+  const searchParams = useSearchParams();
 
-  const [filters, setFilters] = useState<FieldFilters>({
-    city: sp.get("city") ?? undefined,
-    fieldType: sp.get("fieldType") ?? undefined,
+  const [searchCity, setSearchCity] = useState(searchParams.get("city") ?? "");
+  const [format, setFormat] = useState(searchParams.get("fieldType") ?? "");
+  const [maxPrice, setMaxPrice] = useState<number>(0);
+  const [indoorOnly, setIndoorOnly] = useState<boolean>(false);
+  const [lightsOnly, setLightsOnly] = useState<boolean>(false);
+  const [sortBy, setSortBy] = useState<"price-asc" | "price-desc" | "name">("price-asc");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+
+  const queryFilters: FieldFilters = useMemo(
+    () => ({
+      city: searchCity.trim() || undefined,
+      fieldType: format || undefined,
+      maxPrice: maxPrice > 0 ? maxPrice : undefined,
+      indoor: indoorOnly ? true : undefined,
+      hasLights: lightsOnly ? true : undefined,
+    }),
+    [searchCity, format, maxPrice, indoorOnly, lightsOnly]
+  );
+
+  const { data: rawFields = [], isLoading } = useQuery({
+    queryKey: ["fields", queryFilters],
+    queryFn: () => getFields(queryFilters),
   });
-  const [view, setView]           = useState<"grid" | "list">("grid");
-  const [showFilters, setShow]    = useState(false);
 
-  const { data: fields = [], isLoading } = useQuery({
-    queryKey: ["fields", filters],
-    queryFn: () => getFields(filters),
-  });
+  // Tri côté client
+  const sortedFields = useMemo(() => {
+    const list = [...rawFields];
+    if (sortBy === "price-asc") {
+      list.sort((a, b) => a.pricePerHour - b.pricePerHour);
+    } else if (sortBy === "price-desc") {
+      list.sort((a, b) => b.pricePerHour - a.pricePerHour);
+    } else if (sortBy === "name") {
+      list.sort((a, b) => a.name.localeCompare(b.name));
+    }
+    return list;
+  }, [rawFields, sortBy]);
 
-  const toggle = (key: keyof FieldFilters, val: unknown) =>
-    setFilters(p => ({ ...p, [key]: p[key] === val ? undefined : val }));
+  const activeFiltersCount =
+    (searchCity ? 1 : 0) +
+    (format ? 1 : 0) +
+    (maxPrice > 0 ? 1 : 0) +
+    (indoorOnly ? 1 : 0) +
+    (lightsOnly ? 1 : 0);
 
-  const count = Object.values(filters).filter(Boolean).length;
+  const resetAllFilters = () => {
+    setSearchCity("");
+    setFormat("");
+    setMaxPrice(0);
+    setIndoorOnly(false);
+    setLightsOnly(false);
+  };
 
   return (
-    <div className="min-h-screen bg-nuit-pelouse">
+    <div className="min-h-screen bg-nuit-pelouse text-craie pb-16">
+      {/* ── Entête de page ─────────────────────────────────────────── */}
+      <div className="border-b-2 border-encre bg-encre/70 py-6 px-4">
+        <div className="max-w-6xl mx-auto flex flex-col md:flex-row md:items-end justify-between gap-4">
+          <div>
+            <div className="font-mono text-xs uppercase tracking-widest text-vert-projecteur mb-1">
+              Catalogue officiel · FootBook
+            </div>
+            <h1 className="font-display text-4xl md:text-5xl font-black uppercase text-craie tracking-tight leading-none">
+              Trouver un <span className="text-vert-projecteur">terrain</span>
+            </h1>
+          </div>
 
-      {/* En-tête */}
-      <div className="border-b-2 border-encre/40 px-4 py-6 max-w-6xl mx-auto">
-        <div aria-hidden="true" className="font-display font-black text-vert-projecteur/8 text-5xl leading-none select-none -mb-2">TERRAINS</div>
-        <div className="flex items-end justify-between">
-          <h1 className="font-display font-black text-craie uppercase text-3xl leading-none">
-            {fields.length} <span className="text-vert-projecteur">terrain{fields.length !== 1 ? "s" : ""}</span>
-          </h1>
-          <div className="flex items-center gap-2">
-            {/* Filtres toggle */}
-            <button
-              onClick={() => setShow(v => !v)}
-              className={cn("flex items-center gap-1.5 border-2 px-3 py-1.5 font-mono font-bold text-xs uppercase tracking-widest transition-colors",
-                showFilters ? "border-vert-projecteur bg-vert-projecteur text-encre" : "border-craie/20 text-craie/50 hover:border-craie/40")}
-              aria-expanded={showFilters}
-            >
-              <Funnel size={12} weight="bold" />
-              Filtres
-              {count > 0 && <span className="bg-orange-sifflet text-craie text-[9px] font-black w-4 h-4 flex items-center justify-center rounded-full">{count}</span>}
-            </button>
-            {/* Vue grille/liste */}
-            <div className="border-2 border-craie/20 flex">
-              {([["grid", SquaresFour], ["list", List]] as const).map(([v, Icon]) => (
-                <button key={v} onClick={() => setView(v as "grid" | "list")}
-                  className={cn("p-1.5 transition-colors", view === v ? "bg-vert-projecteur text-encre" : "text-craie/40 hover:text-craie")}
-                  aria-pressed={view === v} aria-label={`Vue ${v}`}>
-                  <Icon size={15} weight="bold" />
-                </button>
-              ))}
+          <div className="flex items-center gap-3">
+            <span className="font-mono text-xs text-craie/60 bg-encre border border-craie/20 px-3 py-1.5">
+              <strong className="text-vert-projecteur font-black">{sortedFields.length}</strong> terrain(s) disponible(s)
+            </span>
+
+            {/* Vue toggle */}
+            <div className="border-2 border-encre bg-encre flex">
+              <button
+                onClick={() => setViewMode("grid")}
+                className={cn(
+                  "p-2 transition-colors",
+                  viewMode === "grid"
+                    ? "bg-vert-projecteur text-encre"
+                    : "text-craie/40 hover:text-craie"
+                )}
+                title="Vue grille"
+                aria-label="Vue grille"
+              >
+                <SquaresFour size={16} weight="bold" />
+              </button>
+              <button
+                onClick={() => setViewMode("list")}
+                className={cn(
+                  "p-2 transition-colors",
+                  viewMode === "list"
+                    ? "bg-vert-projecteur text-encre"
+                    : "text-craie/40 hover:text-craie"
+                )}
+                title="Vue liste"
+                aria-label="Vue liste"
+              >
+                <List size={16} weight="bold" />
+              </button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Filtres en pastilles */}
-      <AnimatePresence>
-        {showFilters && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }}
-            className="overflow-hidden border-b-2 border-encre/30 bg-encre/30"
-          >
-            <div className="max-w-6xl mx-auto px-4 py-4 space-y-3">
-              <div className="flex flex-wrap gap-2 items-center">
-                <span className="text-[10px] font-bold text-craie/30 uppercase tracking-widest font-mono mr-1">Type :</span>
-                {TYPE_OPTS.map(({ v, l }) => <PillBtn key={v} active={filters.fieldType === v} onClick={() => toggle("fieldType", v)}>{l}</PillBtn>)}
-              </div>
-              <div className="flex flex-wrap gap-2 items-center">
-                <span className="text-[10px] font-bold text-craie/30 uppercase tracking-widest font-mono mr-1">Prix :</span>
-                {PRICE_OPTS.map(({ v, l }) => <PillBtn key={v} color="yellow" active={filters.maxPrice === v} onClick={() => toggle("maxPrice", v)}>{l}</PillBtn>)}
-              </div>
-              <div className="flex flex-wrap gap-2 items-center">
-                <span className="text-[10px] font-bold text-craie/30 uppercase tracking-widest font-mono mr-1">Éqpt :</span>
-                <PillBtn color="orange" active={!!filters.indoor}    onClick={() => toggle("indoor", true)}>Indoor</PillBtn>
-                <PillBtn color="orange" active={!!filters.hasLights} onClick={() => toggle("hasLights", true)}>Éclairé</PillBtn>
-              </div>
-              {count > 0 && (
-                <button onClick={() => setFilters({})} className="flex items-center gap-1 text-xs text-orange-sifflet font-mono uppercase tracking-widest hover:underline">
-                  <X size={11} weight="bold" />Réinitialiser
+      {/* ── Barre de Filtres Structurée et Ordonnée ─────────────────── */}
+      <div className="border-b-2 border-encre bg-encre/40 px-4 py-4">
+        <div className="max-w-6xl mx-auto space-y-3">
+          {/* Ligne 1 : Recherche ville + Tri */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {/* Input Ville */}
+            <div className="md:col-span-2 flex items-center border-2 border-encre bg-encre px-3 py-2 shadow-brutal focus-within:border-vert-projecteur transition-colors">
+              <MapPin size={16} weight="bold" className="text-vert-projecteur shrink-0 mr-2" />
+              <input
+                type="text"
+                placeholder="Filtrer par ville (ex: Paris, Lyon, Marseille)..."
+                value={searchCity}
+                onChange={(e) => setSearchCity(e.target.value)}
+                className="w-full bg-transparent text-craie placeholder-craie/30 text-sm font-body outline-none"
+                aria-label="Rechercher par ville"
+              />
+              {searchCity && (
+                <button
+                  onClick={() => setSearchCity("")}
+                  className="text-craie/40 hover:text-craie text-xs font-mono ml-2"
+                >
+                  ✕
                 </button>
               )}
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
-      {/* Résultats */}
-      <div className="max-w-6xl mx-auto px-4 py-6">
+            {/* Tri */}
+            <div className="flex items-center border-2 border-encre bg-encre px-3 py-2 shadow-brutal">
+              <ArrowsDownUp size={16} weight="bold" className="text-vert-projecteur shrink-0 mr-2" />
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+                className="w-full bg-transparent text-craie text-xs uppercase font-mono tracking-wider outline-none cursor-pointer"
+                aria-label="Trier par"
+              >
+                <option value="price-asc" className="bg-encre text-craie">
+                  Prix : Moins cher d'abord
+                </option>
+                <option value="price-desc" className="bg-encre text-craie">
+                  Prix : Plus cher d'abord
+                </option>
+                <option value="name" className="bg-encre text-craie">
+                  Nom : Ordre alphabétique
+                </option>
+              </select>
+            </div>
+          </div>
+
+          {/* Ligne 2 : Filtres pastilles ordonnés par catégorie */}
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+            <div className="flex flex-wrap items-center gap-4">
+              {/* Groupe 1: FORMAT */}
+              <div className="flex items-center gap-1.5">
+                <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-craie/40 mr-1">
+                  Format :
+                </span>
+                <div className="flex flex-wrap gap-1">
+                  {FORMAT_OPTIONS.map((opt) => {
+                    const active = format === opt.value;
+                    return (
+                      <button
+                        key={opt.value}
+                        onClick={() => setFormat(opt.value)}
+                        className={cn(
+                          "px-2.5 py-1 text-xs font-mono font-bold uppercase tracking-wide border-2 transition-all",
+                          active
+                            ? "border-vert-projecteur bg-vert-projecteur text-encre shadow-brutal"
+                            : "border-encre bg-nuit-pelouse text-craie/60 hover:text-craie hover:border-craie/40"
+                        )}
+                      >
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Groupe 2: BUDGET */}
+              <div className="flex items-center gap-1.5">
+                <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-craie/40 mr-1">
+                  Budget :
+                </span>
+                <div className="flex flex-wrap gap-1">
+                  {PRICE_OPTIONS.map((opt) => {
+                    const active = maxPrice === opt.value;
+                    return (
+                      <button
+                        key={opt.value}
+                        onClick={() => setMaxPrice(opt.value)}
+                        className={cn(
+                          "px-2.5 py-1 text-xs font-mono font-bold uppercase tracking-wide border-2 transition-all",
+                          active
+                            ? "border-jaune-carton bg-jaune-carton text-encre shadow-brutal"
+                            : "border-encre bg-nuit-pelouse text-craie/60 hover:text-craie hover:border-craie/40"
+                        )}
+                      >
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Groupe 3: COMMODITÉS */}
+              <div className="flex items-center gap-1.5">
+                <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-craie/40 mr-1">
+                  Options :
+                </span>
+                <div className="flex gap-1">
+                  <button
+                    onClick={() => setIndoorOnly(!indoorOnly)}
+                    className={cn(
+                      "flex items-center gap-1 px-2.5 py-1 text-xs font-mono font-bold uppercase tracking-wide border-2 transition-all",
+                      indoorOnly
+                        ? "border-orange-sifflet bg-orange-sifflet text-craie shadow-brutal"
+                        : "border-encre bg-nuit-pelouse text-craie/60 hover:text-craie hover:border-craie/40"
+                    )}
+                  >
+                    <House size={12} weight="bold" />
+                    Indoor
+                  </button>
+
+                  <button
+                    onClick={() => setLightsOnly(!lightsOnly)}
+                    className={cn(
+                      "flex items-center gap-1 px-2.5 py-1 text-xs font-mono font-bold uppercase tracking-wide border-2 transition-all",
+                      lightsOnly
+                        ? "border-vert-projecteur bg-vert-projecteur text-encre shadow-brutal"
+                        : "border-encre bg-nuit-pelouse text-craie/60 hover:text-craie hover:border-craie/40"
+                    )}
+                  >
+                    <Lightning size={12} weight="fill" />
+                    Éclairé
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Reset si des filtres sont actifs */}
+            {activeFiltersCount > 0 && (
+              <button
+                onClick={resetAllFilters}
+                className="flex items-center gap-1 text-xs font-mono font-bold text-orange-sifflet hover:underline uppercase tracking-wider transition-colors ml-auto"
+              >
+                <X size={12} weight="bold" />
+                Effacer les filtres ({activeFiltersCount})
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Contenu & Résultats ─────────────────────────────────────── */}
+      <div className="max-w-6xl mx-auto px-4 py-8">
         {isLoading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="border-2 border-encre bg-encre/20 h-52 animate-pulse" />
+              <div
+                key={i}
+                className="border-2 border-encre bg-encre/30 h-64 animate-pulse shadow-brutal"
+              />
             ))}
           </div>
-        ) : fields.length === 0 ? (
-          <div className="text-center py-16 space-y-3">
-            <div className="font-display font-black text-craie/15 text-6xl">0</div>
-            <p className="text-craie/40 font-mono text-sm uppercase">Aucun terrain trouvé</p>
-            <Button variant="ghost" size="sm" onClick={() => setFilters({})}>Réinitialiser</Button>
+        ) : sortedFields.length === 0 ? (
+          <div className="border-2 border-dashed border-encre/40 p-12 text-center max-w-md mx-auto my-12 bg-encre/20">
+            <div className="font-display font-black text-6xl text-craie/20 mb-2">0</div>
+            <h3 className="font-display text-2xl font-black uppercase text-craie mb-2">
+              Aucun terrain correspondant
+            </h3>
+            <p className="text-craie/50 text-sm font-body mb-6">
+              Modifie tes critères ou efface les filtres pour voir tous les terrains disponibles.
+            </p>
+            <Button variant="primary" size="sm" onClick={resetAllFilters}>
+              Réinitialiser les filtres
+            </Button>
           </div>
         ) : (
-          <div className={cn(view === "grid" ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5" : "flex flex-col gap-3")}>
-            {fields.map((field, i) => (
-              <motion.div key={field.id} initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: i * 0.05 }}>
-                <FieldCard field={field} onClick={() => router.push(`/terrains/${field.id}`)} />
+          <div
+            className={cn(
+              viewMode === "grid"
+                ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+                : "flex flex-col gap-4"
+            )}
+          >
+            {sortedFields.map((field, i) => (
+              <motion.div
+                key={field.id}
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: i * 0.04 }}
+              >
+                <FieldCard
+                  field={field}
+                  onClick={() => router.push(`/terrains/${field.id}`)}
+                />
               </motion.div>
             ))}
           </div>
@@ -157,6 +346,12 @@ function TerrainsContent() {
   );
 }
 
+export const dynamic = "force-dynamic";
+
 export default function TerrainsPage() {
-  return <Suspense><TerrainsContent /></Suspense>;
+  return (
+    <Suspense>
+      <TerrainsContent />
+    </Suspense>
+  );
 }
