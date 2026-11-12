@@ -365,6 +365,8 @@ function BookingContent() {
   );
 }
 
+export const dynamic = "force-dynamic";
+
 export default function ReservationPage() {
   return (
     <Suspense>

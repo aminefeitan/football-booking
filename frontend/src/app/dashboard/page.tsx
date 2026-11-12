@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { TrendUp, CalendarCheck, CurrencyEur, XCircle, ChartBar } from "@phosphor-icons/react";
 import type { Icon } from "@phosphor-icons/react";
 import { MOCK_DASHBOARD_STATS, MOCK_BOOKINGS, MOCK_FIELDS } from "@/lib/mock-data";
-import { formatPrice } from "@/lib/utils";
+import { formatPrice, formatDate, formatTime } from "@/lib/utils";
 import { Badge } from "@/components/ui/Badge";
 
 function StatCard({
@@ -176,10 +176,10 @@ export default function DashboardPage() {
                       {booking.field?.name ?? "—"}
                     </td>
                     <td className="px-5 py-3 font-mono text-sm text-craie/70">
-                      {new Date(booking.startAt).toLocaleDateString("fr-FR")}
+                      {formatDate(booking.startAt)}
                     </td>
                     <td className="px-5 py-3 font-mono text-sm text-vert-projecteur font-bold">
-                      {new Date(booking.startAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                      {formatTime(booking.startAt)}
                     </td>
                     <td className="px-5 py-3 font-mono font-bold text-jaune-carton">
                       {formatPrice(booking.totalAmount)}
