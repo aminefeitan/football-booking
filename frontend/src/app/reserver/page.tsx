@@ -7,16 +7,17 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { motion, AnimatePresence } from "framer-motion";
-import { Share, CopySimple, Check } from "@phosphor-icons/react";
+import { Share, CopySimple, Check, Lock, User, SoccerBall } from "@phosphor-icons/react";
+import { useAuth } from "@/context/AuthContext";
 import { Stepper } from "@/components/ui/Stepper";
 import { Button } from "@/components/ui/Button";
 import { SlotBoard } from "@/components/booking/SlotBoard";
 import { PitchPicker } from "@/components/booking/PitchPicker";
-import { getFieldById } from "@/services/fields.service";
+import { getFieldById, getFieldSlots } from "@/services/fields.service";
 import { createBooking } from "@/services/bookings.service";
 import { processPayment } from "@/services/payments.service";
-import { MOCK_FIELDS, MOCK_SLOTS } from "@/lib/mock-data";
-import { formatPrice, formatFieldType, formatDate } from "@/lib/utils";
+import { MOCK_FIELDS } from "@/lib/mock-data";
+import { formatPrice, formatFieldType, formatDate, formatWorkingHours } from "@/lib/utils";
 import type { Field } from "@/lib/types";
 
 const STEPS = [
@@ -35,20 +36,29 @@ type PaymentForm = z.infer<typeof paymentSchema>;
 function BookingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { isAuthenticated, loading } = useAuth();
   const preselectedFieldId = searchParams.get("fieldId") ?? undefined;
+  const paramDate = searchParams.get("date");
+  const paramTime = searchParams.get("time");
 
   const [step, setStep] = useState(preselectedFieldId ? 1 : 0);
   const [selectedFieldId, setSelectedFieldId] = useState<string | undefined>(preselectedFieldId);
   const [selectedDate, setSelectedDate] = useState<string>(
-    new Date(Date.now() + 24 * 3600 * 1000).toISOString().slice(0, 10)
+    paramDate ?? new Date(Date.now() + 24 * 3600 * 1000).toISOString().slice(0, 10)
   );
-  const [selectedTime, setSelectedTime] = useState<string | undefined>();
+  const [selectedTime, setSelectedTime] = useState<string | undefined>(paramTime ?? undefined);
   const [inviteCopied, setInviteCopied] = useState(false);
   const [bookingId, setBookingId] = useState<string | undefined>();
 
   const { data: selectedField } = useQuery({
     queryKey: ["field", selectedFieldId],
     queryFn: () => getFieldById(selectedFieldId!),
+    enabled: !!selectedFieldId,
+  });
+
+  const { data: slots = [] } = useQuery({
+    queryKey: ["field-slots", selectedFieldId, selectedDate, selectedField?.openTime, selectedField?.closeTime],
+    queryFn: () => getFieldSlots(selectedFieldId!, selectedDate, selectedField),
     enabled: !!selectedFieldId,
   });
 
@@ -65,6 +75,69 @@ function BookingContent() {
     },
   });
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-nuit-pelouse flex items-center justify-center px-4">
+        <div className="border-2 border-encre bg-encre p-8 text-center shadow-brutal animate-pulse">
+          <div className="font-mono text-sm text-vert-projecteur uppercase tracking-widest">
+            Vérification de la session...
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Garde : Un invité ne peut pas réserver de terrain, il doit se connecter
+  if (!isAuthenticated) {
+    const redirectUrl = preselectedFieldId
+      ? `/reserver?fieldId=${preselectedFieldId}`
+      : "/reserver";
+
+    return (
+      <div className="min-h-screen bg-nuit-pelouse flex items-center justify-center px-4 py-16">
+        <div className="max-w-md w-full border-2 border-encre bg-encre p-8 shadow-brutal-xl text-center">
+          <div className="inline-flex items-center gap-2 border-2 border-vert-projecteur bg-vert-projecteur text-encre px-3 py-1 font-mono font-bold text-xs uppercase tracking-widest mb-6 shadow-brutal">
+            <Lock size={14} weight="bold" />
+            Connexion Requise
+          </div>
+
+          <div className="w-16 h-16 border-2 border-encre bg-vert-projecteur text-encre flex items-center justify-center mx-auto mb-6 shadow-brutal">
+            <SoccerBall size={36} weight="fill" />
+          </div>
+
+          <h1 className="font-display font-black text-3xl uppercase text-craie mb-3">
+            Réservation <span className="text-vert-projecteur">de terrain</span>
+          </h1>
+
+          <p className="text-craie/70 text-sm font-body mb-8 leading-relaxed">
+            Les visiteurs peuvent consulter librement les terrains et leurs fiches détaillées, mais la réservation d&apos;un créneau nécessite un compte joueur FootBook.
+          </p>
+
+          <div className="space-y-3">
+            <Button
+              variant="primary"
+              size="lg"
+              className="w-full shadow-brutal"
+              onClick={() => router.push(`/auth?redirect=${encodeURIComponent(redirectUrl)}`)}
+              icon={<User size={16} weight="bold" />}
+            >
+              Se connecter pour réserver
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="md"
+              className="w-full"
+              onClick={() => router.push(preselectedFieldId ? `/terrains/${preselectedFieldId}` : "/terrains")}
+            >
+              Retour à la fiche terrain
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const handleFieldSelect = (fieldId: string) => {
     setSelectedFieldId(fieldId);
     setStep(1);
@@ -79,6 +152,10 @@ function BookingContent() {
   };
 
   const handlePayment = handleSubmit(async (data) => {
+    if (!isAuthenticated) {
+      router.push(`/auth?redirect=/reserver?fieldId=${selectedFieldId}`);
+      return;
+    }
     if (!selectedFieldId || !selectedTime) return;
     const startAt = `${selectedDate}T${selectedTime}:00`;
     const endAtDate = new Date(`${selectedDate}T${selectedTime}:00`);
@@ -198,7 +275,7 @@ function BookingContent() {
 
                   {/* Slot board */}
                   <SlotBoard
-                    slots={MOCK_SLOTS}
+                    slots={slots}
                     selectedTime={selectedTime}
                     onSelect={handleTimeSelect}
                   />
@@ -276,6 +353,30 @@ function BookingContent() {
                       </button>
                     </div>
 
+                    {!isAuthenticated && (
+                      <div className="border-2 border-orange-sifflet bg-orange-sifflet/10 p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                          <Lock size={24} weight="bold" className="text-orange-sifflet shrink-0" />
+                          <div>
+                            <div className="font-mono font-bold text-sm text-orange-sifflet uppercase">
+                              Connexion requise pour valider
+                            </div>
+                            <div className="text-xs text-craie/70 font-body">
+                              Connectez-vous pour finaliser la réservation et générer votre billet officiel de match.
+                            </div>
+                          </div>
+                        </div>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          type="button"
+                          onClick={() => router.push(`/auth?redirect=/reserver?fieldId=${selectedFieldId}`)}
+                        >
+                          Se connecter
+                        </Button>
+                      </div>
+                    )}
+
                     <div className="flex gap-4">
                       <Button variant="ghost" type="button" onClick={() => setStep(1)}>Retour</Button>
                       <Button
@@ -284,7 +385,7 @@ function BookingContent() {
                         type="submit"
                         loading={bookingMutation.isPending}
                       >
-                        Confirmer la réservation
+                        {isAuthenticated ? "Confirmer la réservation" : "Se connecter et réserver"}
                       </Button>
                     </div>
                   </form>
@@ -330,7 +431,9 @@ function BookingContent() {
                     <div>
                       <div className="text-xs font-bold text-craie/40 uppercase tracking-widest font-mono">Terrain</div>
                       <div className="font-bold text-craie">{selectedField.name}</div>
-                      <div className="text-xs text-craie/50 font-mono">{selectedField.city}</div>
+                      <div className="text-xs text-craie/50 font-mono">
+                        {selectedField.city} · {formatWorkingHours(selectedField.openTime, selectedField.closeTime)}
+                      </div>
                     </div>
                     {selectedDate && (
                       <div>

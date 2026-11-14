@@ -14,9 +14,9 @@ import java.util.logging.Logger;
 @DataSourceDefinition(
     name = "java:jboss/datasources/FootballBookingDS",
     className = "org.postgresql.ds.PGSimpleDataSource",
-    url = "jdbc:postgresql://localhost:5432/football_booking?stringtype=unspecified",
-    user = "postgres",
-    password = "Amine@2005"
+    url = "${env.DB_URL:jdbc:postgresql://localhost:5432/football_booking?stringtype=unspecified}",
+    user = "${env.DB_USER:postgres}",
+    password = "${env.DB_PASSWORD:postgres}"
 )
 @ApplicationScoped
 public class FlywayMigrator {

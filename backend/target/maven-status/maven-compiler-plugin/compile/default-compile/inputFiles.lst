@@ -1,6 +1,7 @@
 C:\Users\HP\IdeaProjects\football-booking\backend\src\main\java\com\sports\footballbooking\config\Authenticated.java
 C:\Users\HP\IdeaProjects\football-booking\backend\src\main\java\com\sports\footballbooking\config\AuthFilter.java
 C:\Users\HP\IdeaProjects\football-booking\backend\src\main\java\com\sports\footballbooking\config\CorsFilter.java
+C:\Users\HP\IdeaProjects\football-booking\backend\src\main\java\com\sports\footballbooking\config\EnvLoader.java
 C:\Users\HP\IdeaProjects\football-booking\backend\src\main\java\com\sports\footballbooking\config\FlywayMigrator.java
 C:\Users\HP\IdeaProjects\football-booking\backend\src\main\java\com\sports\footballbooking\config\JwtService.java
 C:\Users\HP\IdeaProjects\football-booking\backend\src\main\java\com\sports\footballbooking\config\SecurityUtils.java
@@ -29,9 +30,11 @@ C:\Users\HP\IdeaProjects\football-booking\backend\src\main\java\com\sports\footb
 C:\Users\HP\IdeaProjects\football-booking\backend\src\main\java\com\sports\footballbooking\repository\PlayerRepository.java
 C:\Users\HP\IdeaProjects\football-booking\backend\src\main\java\com\sports\footballbooking\repository\TeamRepository.java
 C:\Users\HP\IdeaProjects\football-booking\backend\src\main\java\com\sports\footballbooking\repository\UserRepository.java
+C:\Users\HP\IdeaProjects\football-booking\backend\src\main\java\com\sports\footballbooking\resource\AdminResource.java
 C:\Users\HP\IdeaProjects\football-booking\backend\src\main\java\com\sports\footballbooking\resource\AuthResource.java
 C:\Users\HP\IdeaProjects\football-booking\backend\src\main\java\com\sports\footballbooking\resource\BookingResource.java
 C:\Users\HP\IdeaProjects\football-booking\backend\src\main\java\com\sports\footballbooking\resource\FieldResource.java
+C:\Users\HP\IdeaProjects\football-booking\backend\src\main\java\com\sports\footballbooking\resource\ManagerResource.java
 C:\Users\HP\IdeaProjects\football-booking\backend\src\main\java\com\sports\footballbooking\resource\MatchResource.java
 C:\Users\HP\IdeaProjects\football-booking\backend\src\main\java\com\sports\footballbooking\resource\PaymentResource.java
 C:\Users\HP\IdeaProjects\football-booking\backend\src\main\java\com\sports\footballbooking\resource\PlayerResource.java

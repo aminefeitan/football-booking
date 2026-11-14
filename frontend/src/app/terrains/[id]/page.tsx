@@ -1,25 +1,36 @@
 "use client";
 
-import { use } from "react";
+import { use, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { MapPin, Lightning, Car, Shower, Moon, Phone, ArrowLeft } from "@phosphor-icons/react";
-import { getFieldById } from "@/services/fields.service";
+import { MapPin, Lightning, Car, Shower, Moon, Phone, ArrowLeft, Lock, User as UserIcon, Clock } from "@phosphor-icons/react";
+import { useAuth } from "@/context/AuthContext";
+import { getFieldById, getFieldSlots } from "@/services/fields.service";
 import { Button } from "@/components/ui/Button";
 import { SlotBoard } from "@/components/booking/SlotBoard";
-import { formatPrice, formatFieldType, formatSurface } from "@/lib/utils";
-import { MOCK_SLOTS } from "@/lib/mock-data";
+import { formatPrice, formatFieldType, formatSurface, formatWorkingHours } from "@/lib/utils";
 
 interface Props { params: Promise<{ id: string }> }
 
 export default function TerrainDetailPage({ params }: Props) {
   const { id }  = use(params);
   const router  = useRouter();
+  const { isAuthenticated } = useAuth();
 
   const { data: field, isLoading, error } = useQuery({
     queryKey: ["field", id],
     queryFn: () => getFieldById(id),
+  });
+
+  const [selectedDate, setSelectedDate] = useState<string>(() =>
+    new Date().toISOString().slice(0, 10)
+  );
+
+  const { data: slots = [] } = useQuery({
+    queryKey: ["field-slots", id, selectedDate, field?.openTime, field?.closeTime],
+    queryFn: () => getFieldSlots(id, selectedDate, field),
+    enabled: !!field,
   });
 
   if (isLoading) return (
@@ -93,6 +104,10 @@ export default function TerrainDetailPage({ params }: Props) {
                     <a href={`tel:${field.phone}`} className="hover:text-vert-projecteur">{field.phone}</a>
                   </div>
                 )}
+                <div className="flex items-center gap-1.5 text-craie/70 text-xs font-mono">
+                  <Clock size={12} weight="bold" className="text-vert-projecteur" />
+                  <span>Horaires : <strong className="text-vert-projecteur">{formatWorkingHours(field.openTime, field.closeTime)}</strong></span>
+                </div>
               </div>
             </div>
 
@@ -121,10 +136,10 @@ export default function TerrainDetailPage({ params }: Props) {
               <h2 className="font-display font-black text-craie uppercase text-xl mb-3">Caractéristiques</h2>
               <div className="grid grid-cols-2 gap-2">
                 {[
+                  { label: "Horaires",  value: formatWorkingHours(field.openTime, field.closeTime) },
                   { label: "Surface",   value: formatSurface(field.surfaceType ?? "SYNTHETIC") },
                   { label: "Capacité",  value: `${field.capacity ?? "—"} joueurs` },
                   { label: "Type",      value: formatFieldType(field.fieldType) },
-                  { label: "Monnaie",   value: field.currency },
                 ].map(({ label, value }) => (
                   <div key={label} className="border-2 border-encre/20 p-2.5">
                     <div className="text-[10px] font-bold text-craie/30 uppercase tracking-widest font-mono mb-0.5">{label}</div>
@@ -136,10 +151,31 @@ export default function TerrainDetailPage({ params }: Props) {
 
             {/* Créneaux */}
             <div>
-              <h2 className="font-display font-black text-craie uppercase text-xl mb-3">
-                Créneaux <span className="text-vert-projecteur">disponibles</span>
-              </h2>
-              <SlotBoard slots={MOCK_SLOTS} />
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+                <h2 className="font-display font-black text-craie uppercase text-xl">
+                  Créneaux <span className="text-vert-projecteur">disponibles</span>
+                </h2>
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-mono text-craie/60 uppercase">Date :</span>
+                  <input
+                    type="date"
+                    value={selectedDate}
+                    onChange={(e) => setSelectedDate(e.target.value)}
+                    min={new Date().toISOString().slice(0, 10)}
+                    className="border-2 border-encre/60 bg-encre text-craie px-2.5 py-1 text-xs font-mono outline-none focus:border-vert-projecteur"
+                  />
+                </div>
+              </div>
+              <SlotBoard
+                slots={slots}
+                onSelect={(time) => {
+                  if (isAuthenticated) {
+                    router.push(`/reserver?fieldId=${field.id}&date=${selectedDate}&time=${time}`);
+                  } else {
+                    router.push(`/auth?redirect=/reserver?fieldId=${field.id}`);
+                  }
+                }}
+              />
             </div>
           </div>
 
@@ -154,14 +190,33 @@ export default function TerrainDetailPage({ params }: Props) {
                 <div className="text-[10px] font-bold text-craie/30 uppercase tracking-widest font-mono mt-1">
                   {formatFieldType(field.fieldType)} · {field.city}
                 </div>
+                <div className="text-[11px] font-mono text-vert-projecteur flex items-center gap-1.5 mt-1">
+                  <Clock size={12} weight="bold" />
+                  <span>{formatWorkingHours(field.openTime, field.closeTime)}</span>
+                </div>
               </div>
 
-              <Button
-                variant="booking" size="md" className="w-full"
-                onClick={() => router.push(`/reserver?fieldId=${field.id}`)}
-              >
-                Réserver maintenant
-              </Button>
+              {isAuthenticated ? (
+                <Button
+                  variant="booking" size="md" className="w-full shadow-brutal"
+                  onClick={() => router.push(`/reserver?fieldId=${field.id}`)}
+                >
+                  Réserver maintenant
+                </Button>
+              ) : (
+                <div className="space-y-2.5">
+                  <Button
+                    variant="primary" size="md" className="w-full shadow-brutal"
+                    onClick={() => router.push(`/auth?redirect=/reserver?fieldId=${field.id}`)}
+                    icon={<UserIcon size={16} weight="bold" />}
+                  >
+                    Se connecter pour réserver
+                  </Button>
+                  <div className="p-2 border border-jaune-carton/40 bg-jaune-carton/10 text-jaune-carton text-[11px] font-mono leading-tight text-center">
+                    🔒 Consultation publique. Connectez-vous avec un compte joueur pour valider ce créneau.
+                  </div>
+                </div>
+              )}
 
               <p className="text-center text-[10px] text-craie/30 font-mono uppercase">
                 Annulation gratuite 24h avant

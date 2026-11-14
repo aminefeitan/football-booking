@@ -1,9 +1,12 @@
 package com.sports.footballbooking.config;
 
+import jakarta.annotation.Priority;
+import jakarta.ws.rs.Priorities;
 import jakarta.ws.rs.container.ContainerRequestContext;
 import jakarta.ws.rs.container.ContainerRequestFilter;
 import jakarta.ws.rs.container.ContainerResponseContext;
 import jakarta.ws.rs.container.ContainerResponseFilter;
+import jakarta.ws.rs.container.PreMatching;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.ext.Provider;
 
@@ -12,9 +15,11 @@ import java.io.IOException;
 /**
  * Filtre CORS sécurisé et compatible React / Next.js.
  * Supporte Access-Control-Allow-Credentials avec renvoi dynamique de l'Origine
- * et gère les requêtes preflight OPTIONS.
+ * et gère les requêtes preflight OPTIONS en phase @PreMatching.
  */
 @Provider
+@PreMatching
+@Priority(Priorities.AUTHENTICATION - 100)
 public class CorsFilter implements ContainerRequestFilter, ContainerResponseFilter {
 
     private static final String ALLOWED_HEADERS =

@@ -1,8 +1,8 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { MapPin, Lightning, Moon } from "@phosphor-icons/react";
-import { cn, formatPrice, formatFieldType } from "@/lib/utils";
+import { MapPin, Lightning, Moon, Clock } from "@phosphor-icons/react";
+import { cn, formatPrice, formatFieldType, formatWorkingHours } from "@/lib/utils";
 import type { Field } from "@/lib/types";
 
 interface FieldCardProps {
@@ -71,6 +71,13 @@ export function FieldCard({ field, onClick, className }: FieldCardProps) {
           <MapPin size={11} weight="bold" />
           <span className="font-mono">{field.city}{field.address ? ` · ${field.address}` : ""}</span>
         </div>
+
+        {(field.openTime || field.closeTime) && (
+          <div className="flex items-center gap-1 text-[11px] font-mono text-vert-projecteur font-bold pt-0.5">
+            <Clock size={11} weight="bold" />
+            <span>{formatWorkingHours(field.openTime, field.closeTime)}</span>
+          </div>
+        )}
 
         <div className="flex gap-3 pt-0.5">
           {field.hasLights && (

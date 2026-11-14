@@ -26,6 +26,17 @@ export const MOCK_MANAGER: User = {
   businessName: "Lyon Football Club",
 };
 
+export const MOCK_ADMIN: User = {
+  id: "admin-1",
+  email: "admin@example.com",
+  firstName: "Directeur",
+  lastName: "Système",
+  role: "ADMIN",
+  status: "ACTIVE",
+  city: "Paris",
+  department: "Direction Générale FootBook",
+};
+
 export const MOCK_FIELDS: Field[] = [
   {
     id: "field-1",
@@ -46,6 +57,8 @@ export const MOCK_FIELDS: Field[] = [
     hasLights: true,
     hasLockerRoom: true,
     hasParking: false,
+    openTime: "09:00",
+    closeTime: "23:00",
     active: true,
     owner: MOCK_MANAGER,
   },
@@ -68,6 +81,8 @@ export const MOCK_FIELDS: Field[] = [
     hasLights: true,
     hasLockerRoom: true,
     hasParking: true,
+    openTime: "08:00",
+    closeTime: "00:00",
     active: true,
     owner: MOCK_MANAGER,
   },
@@ -90,6 +105,8 @@ export const MOCK_FIELDS: Field[] = [
     hasLights: false,
     hasLockerRoom: false,
     hasParking: true,
+    openTime: "08:00",
+    closeTime: "00:00",
     active: true,
     owner: MOCK_MANAGER,
   },
@@ -112,6 +129,8 @@ export const MOCK_FIELDS: Field[] = [
     hasLights: true,
     hasLockerRoom: true,
     hasParking: true,
+    openTime: "08:00",
+    closeTime: "00:00",
     active: true,
     owner: MOCK_MANAGER,
   },
@@ -134,6 +153,8 @@ export const MOCK_FIELDS: Field[] = [
     hasLights: true,
     hasLockerRoom: true,
     hasParking: false,
+    openTime: "09:00",
+    closeTime: "23:00",
     active: true,
     owner: MOCK_MANAGER,
   },
@@ -156,6 +177,8 @@ export const MOCK_FIELDS: Field[] = [
     hasLights: true,
     hasLockerRoom: false,
     hasParking: false,
+    openTime: "09:00",
+    closeTime: "23:00",
     active: true,
     owner: MOCK_MANAGER,
   },

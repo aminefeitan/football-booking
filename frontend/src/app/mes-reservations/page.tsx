@@ -4,7 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowClockwise, X, Ticket, Plus } from "@phosphor-icons/react";
+import { ArrowClockwise, X, Ticket, Plus, Lock, User, SoccerBall } from "@phosphor-icons/react";
+import { useAuth } from "@/context/AuthContext";
 import { getMyBookings, cancelBooking } from "@/services/bookings.service";
 import { TicketCard } from "@/components/booking/TicketCard";
 import { Button } from "@/components/ui/Button";
@@ -33,12 +34,14 @@ function statusToBadge(status: BookingStatus) {
 export default function MesReservationsPage() {
   const router = useRouter();
   const qc = useQueryClient();
+  const { isAuthenticated, loading } = useAuth();
   const [activeTab, setActiveTab] = useState<BookingStatus | "ALL">("ALL");
   const [cancellingId, setCancellingId] = useState<string | null>(null);
 
   const { data: bookings = [], isLoading } = useQuery({
     queryKey: ["bookings", "me"],
     queryFn: getMyBookings,
+    enabled: isAuthenticated,
   });
 
   const cancelMutation = useMutation({
@@ -48,6 +51,66 @@ export default function MesReservationsPage() {
       setCancellingId(null);
     },
   });
+
+  // Écran d'attente lors du chargement initial de la session
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-nuit-pelouse flex items-center justify-center px-4">
+        <div className="border-2 border-encre bg-encre p-8 text-center shadow-brutal animate-pulse">
+          <div className="font-mono text-sm text-vert-projecteur uppercase tracking-widest">
+            Chargement de la session...
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Écran de garde : Utilisateur non authentifié
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-nuit-pelouse flex items-center justify-center px-4 py-16">
+        <div className="max-w-md w-full border-2 border-encre bg-encre p-8 shadow-brutal-xl text-center">
+          <div className="inline-flex items-center gap-2 border-2 border-jaune-carton bg-jaune-carton text-encre px-3 py-1 font-mono font-bold text-xs uppercase tracking-widest mb-6 shadow-brutal">
+            <Lock size={14} weight="bold" />
+            Accès réservé
+          </div>
+
+          <div className="w-16 h-16 border-2 border-encre bg-vert-projecteur text-encre flex items-center justify-center mx-auto mb-6 shadow-brutal">
+            <Ticket size={32} weight="fill" />
+          </div>
+
+          <h1 className="font-display font-black text-3xl uppercase text-craie mb-3">
+            Mes <span className="text-vert-projecteur">Réservations</span>
+          </h1>
+
+          <p className="text-craie/70 text-sm font-body mb-8 leading-relaxed">
+            Vous devez être connecté à votre compte pour consulter vos réservations et accéder à vos billets officiels de match.
+          </p>
+
+          <div className="space-y-3">
+            <Button
+              variant="primary"
+              size="lg"
+              className="w-full"
+              onClick={() => router.push("/auth?redirect=/mes-reservations")}
+              icon={<User size={16} weight="bold" />}
+            >
+              Se connecter / Créer un compte
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="md"
+              className="w-full"
+              onClick={() => router.push("/terrains")}
+            >
+              Explorer les terrains
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const filtered = activeTab === "ALL"
     ? bookings

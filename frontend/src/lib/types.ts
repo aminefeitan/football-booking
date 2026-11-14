@@ -52,6 +52,8 @@ export interface Field {
   hasLockerRoom: boolean;
   hasParking: boolean;
   active: boolean;
+  openTime?: string;
+  closeTime?: string;
   owner?: User;
 }
 

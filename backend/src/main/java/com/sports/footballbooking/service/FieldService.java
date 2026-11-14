@@ -47,13 +47,27 @@ public class FieldService {
             boolean indoor,
             boolean hasLights,
             boolean hasLockerRoom,
-            boolean hasParking
+            boolean hasParking,
+            String openTime,
+            String closeTime
     ) {}
 
     // ==================== Méthodes ====================
 
     public List<Field> getAllActiveFields() {
         return fieldRepository.findAllActive();
+    }
+
+    public List<Field> getAllFields() {
+        return fieldRepository.findAll();
+    }
+
+    public Field setFieldActive(UUID fieldId, boolean active) {
+        Field field = getFieldById(fieldId);
+        field.setActive(active);
+        fieldRepository.save(field);
+        LOG.info("Terrain " + (active ? "activé" : "désactivé") + ": " + field.getName());
+        return field;
     }
 
     public Field getFieldById(UUID id) {
@@ -109,6 +123,8 @@ public class FieldService {
         field.setHasLights(req.hasLights());
         field.setHasLockerRoom(req.hasLockerRoom());
         field.setHasParking(req.hasParking());
+        if (req.openTime() != null && !req.openTime().isBlank()) field.setOpenTime(req.openTime());
+        if (req.closeTime() != null && !req.closeTime().isBlank()) field.setCloseTime(req.closeTime());
         if (req.currency() != null && !req.currency().isBlank()) field.setCurrency(req.currency());
     }
 }

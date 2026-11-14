@@ -47,10 +47,9 @@ public class BookingRepository extends BaseRepository<Booking> {
         CriteriaBuilder cb = cb();
         CriteriaQuery<Booking> cq = newQuery();
         Root<Booking> root = cq.from(Booking.class);
-        cq.where(
-                cb.equal(root.get("field").get("id"), fieldId),
-                root.get("status").in(Booking.Status.PENDING_PAYMENT, Booking.Status.CONFIRMED)
-        ).orderBy(cb.asc(root.get("startAt")));
+        // Retourne TOUTES les réservations du terrain (tous statuts, pour dashboard gérant)
+        cq.where(cb.equal(root.get("field").get("id"), fieldId))
+          .orderBy(cb.desc(root.get("startAt")));
         return em.createQuery(cq).getResultList();
     }
 

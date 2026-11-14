@@ -61,3 +61,19 @@ export function formatSurface(surface: string): string {
   return map[surface] ?? surface;
 }
 
+export function formatTime12h(timeStr?: string): string {
+  if (!timeStr) return "";
+  const parts = timeStr.split(":");
+  if (parts.length < 2) return timeStr;
+  const h = parseInt(parts[0], 10);
+  const m = parseInt(parts[1], 10);
+  if (isNaN(h)) return timeStr;
+  const ampm = h >= 12 ? "PM" : "AM";
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return m === 0 ? `${h12} ${ampm}` : `${h12}:${m.toString().padStart(2, "0")} ${ampm}`;
+}
+
+export function formatWorkingHours(open = "09:00", close = "23:00"): string {
+  return `${open} - ${close} (${formatTime12h(open)} - ${formatTime12h(close)})`;
+}
+
