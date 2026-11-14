@@ -99,6 +99,17 @@ public class AuthService {
         return userRepository.findByRole(role);
     }
 
+    public List<User> getAllUsers() {
+        return userRepository.findAll();
+    }
+
+    public User updateUserStatus(UUID userId, User.Status newStatus) {
+        User user = getUserById(userId);
+        user.setStatus(newStatus);
+        userRepository.save(user);
+        return user;
+    }
+
     public UUID resolveUserIdFromToken(String token) {
         if (token == null || token.isBlank()) return null;
         var claims = jwtService.validateToken(token);

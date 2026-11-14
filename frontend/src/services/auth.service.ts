@@ -1,6 +1,5 @@
-import { api, persistSession, clearSession, getStoredUserJson } from "@/lib/api";
+import { api, persistSession, clearSession, getStoredUserJson, ApiError } from "@/lib/api";
 import type { AuthResponse, User } from "@/lib/types";
-import { MOCK_USER, MOCK_MANAGER } from "@/lib/mock-data";
 
 export interface LoginRequest {
   email: string;
@@ -24,26 +23,16 @@ export async function login(data: LoginRequest): Promise<AuthResponse> {
     });
     persistSession(res.user.id, JSON.stringify(res.user), res.token);
     return res;
-  } catch {
-    // Mode hors-ligne / Mock de développement
-    const stored = getStoredUserJson();
-    let user: User;
-
-    if (stored) {
-      user = JSON.parse(stored) as User;
-      if (data.email) user.email = data.email;
-    } else if (data.email.toLowerCase().includes("manager")) {
-      user = { ...MOCK_MANAGER, email: data.email };
-    } else {
-      user = { ...MOCK_USER, email: data.email };
+  } catch (err: unknown) {
+    // Si le serveur backend a répondu avec une erreur HTTP (ex: 400, 401, 409...),
+    // propager l'erreur telle quelle.
+    if (err instanceof ApiError) {
+      throw err;
     }
-
-    const mockRes: AuthResponse = {
-      token: "mock-jwt-" + Date.now(),
-      user,
-    };
-    persistSession(user.id, JSON.stringify(user), mockRes.token);
-    return mockRes;
+    // Erreur réseau / serveur inaccessible
+    throw new Error(
+      "Impossible de joindre le serveur. Vérifiez que le backend est démarré."
+    );
   }
 }
 
@@ -55,27 +44,14 @@ export async function register(data: RegisterRequest): Promise<AuthResponse> {
     });
     persistSession(res.user.id, JSON.stringify(res.user), res.token);
     return res;
-  } catch {
-    // Mode hors-ligne / Mock : on crée le compte avec les vraies données saisies
-    const isManager = data.role === "FIELD_MANAGER";
-    const mockUser: User = {
-      id: "user-" + Date.now(),
-      email: data.email,
-      firstName: data.firstName,
-      lastName: data.lastName,
-      phone: data.phone,
-      role: data.role ?? "PLAYER",
-      status: "ACTIVE",
-      businessName: isManager ? "Complexe " + data.lastName : undefined,
-      createdAt: new Date().toISOString(),
-    };
-
-    const mockRes: AuthResponse = {
-      token: "mock-jwt-" + Date.now(),
-      user: mockUser,
-    };
-    persistSession(mockUser.id, JSON.stringify(mockUser), mockRes.token);
-    return mockRes;
+  } catch (err: unknown) {
+    if (err instanceof ApiError) {
+      throw err;
+    }
+    // Erreur réseau / serveur inaccessible
+    throw new Error(
+      "Impossible de joindre le serveur. Vérifiez que le backend est démarré."
+    );
   }
 }
 
@@ -83,9 +59,10 @@ export async function getMe(): Promise<User> {
   try {
     return await api<User>("/auth/me", { auth: true });
   } catch {
+    // Fallback : lire l'utilisateur stocké en session locale
     const stored = getStoredUserJson();
     if (stored) return JSON.parse(stored) as User;
-    return MOCK_USER;
+    throw new Error("Session expirée. Veuillez vous reconnecter.");
   }
 }
 

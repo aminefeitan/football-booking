@@ -69,11 +69,20 @@ export async function api<T>(path: string, options: Options = {}): Promise<T> {
     h.set("X-User-Id", userId);
   }
 
-  const res = await fetch(`${API_BASE}${path}`, {
-    ...rest,
-    headers: h,
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}${path}`, {
+      ...rest,
+      headers: h,
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    });
+  } catch (err: unknown) {
+    throw new ApiError(
+      0,
+      `Connexion impossible au serveur backend (${API_BASE}). Vérifiez que le serveur WildFly/Java est démarré sur le port 8080.`,
+      "NETWORK_ERROR"
+    );
+  }
 
   if (res.status === 204) return undefined as T;
 

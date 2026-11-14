@@ -57,10 +57,9 @@ public class FieldRepository extends BaseRepository<Field> {
         CriteriaBuilder cb = cb();
         CriteriaQuery<Field> cq = newQuery();
         Root<Field> root = cq.from(Field.class);
-        cq.where(
-                cb.equal(root.get("owner").get("id"), ownerId),
-                cb.isTrue(root.get("active"))
-        ).orderBy(cb.desc(root.get("createdAt")));
+        // Retourne TOUS les terrains du gérant (actifs et inactifs)
+        cq.where(cb.equal(root.get("owner").get("id"), ownerId))
+          .orderBy(cb.desc(root.get("createdAt")));
         return em.createQuery(cq).getResultList();
     }
 }

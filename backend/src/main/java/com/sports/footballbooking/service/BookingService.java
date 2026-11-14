@@ -15,7 +15,11 @@ import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Duration;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.logging.Logger;
@@ -39,6 +43,8 @@ public class BookingService {
 
     // ==================== DTO compact ====================
 
+    public record SlotDto(String time, String status) {}
+
     public record CreateBookingRequest(
             @NotNull UUID fieldId,
             @NotNull OffsetDateTime startAt,
@@ -61,6 +67,7 @@ public class BookingService {
         }
 
         validateTimes(request.startAt(), request.endAt());
+        validateFieldWorkingHours(field, request.startAt(), request.endAt());
 
         List<Booking> overlapping = bookingRepository.findOverlapping(field.getId(), request.startAt(), request.endAt());
         if (!overlapping.isEmpty()) {
@@ -80,6 +87,65 @@ public class BookingService {
         return bookingRepository.findByUser(userId);
     }
 
+    public List<Booking> getAllBookings() {
+        return bookingRepository.findAll();
+    }
+
+    public List<Booking> getBookingsByField(UUID fieldId) {
+        return bookingRepository.findByField(fieldId);
+    }
+
+    public List<SlotDto> getFieldSlots(UUID fieldId, LocalDate date) {
+        Field field = fieldRepository.getById(fieldId);
+        List<Booking> bookings = bookingRepository.findByField(fieldId);
+
+        String openStr = field.getOpenTime() != null ? field.getOpenTime() : "09:00";
+        String closeStr = field.getCloseTime() != null ? field.getCloseTime() : "23:00";
+
+        LocalTime openTime;
+        LocalTime closeTime;
+        try {
+            openTime = LocalTime.parse(openStr);
+        } catch (Exception e) {
+            openTime = LocalTime.of(9, 0);
+        }
+        try {
+            closeTime = LocalTime.parse(closeStr);
+        } catch (Exception e) {
+            closeTime = LocalTime.of(23, 0);
+        }
+
+        int startHour = openTime.getHour();
+        int endHour = closeTime.getHour();
+        if (endHour <= startHour) {
+            endHour += 24; // fermeture après minuit (ex. 00:00 -> 24)
+        }
+
+        List<SlotDto> slots = new ArrayList<>();
+        LocalDate queryDate = date != null ? date : LocalDate.now();
+
+        for (int h = startHour; h < endHour; h++) {
+            int currentHour = h % 24;
+            String timeFormatted = String.format("%02d:00", currentHour);
+            LocalDate slotDate = (h >= 24) ? queryDate.plusDays(1) : queryDate;
+
+            // Début et fin du créneau horaire
+            OffsetDateTime slotStart = slotDate.atTime(currentHour, 0).atOffset(ZoneOffset.UTC);
+            OffsetDateTime slotEnd = slotStart.plusHours(1);
+
+            // Vérifie si une réservation active chevauche ce créneau
+            boolean isBooked = bookings.stream().anyMatch(b -> {
+                if (b.getStatus() == Booking.Status.CANCELLED) return false;
+                // Chevauchement : b.startAt < slotEnd && b.endAt > slotStart
+                return b.getStartAt().isBefore(slotEnd) && b.getEndAt().isAfter(slotStart);
+            });
+
+            slots.add(new SlotDto(timeFormatted, isBooked ? "reserved" : "available"));
+        }
+
+        return slots;
+    }
+
     public Booking getBookingById(UUID bookingId) {
         return bookingRepository.getById(bookingId);
     }
@@ -90,6 +156,26 @@ public class BookingService {
             throw new BusinessException("Vous ne pouvez annuler que vos propres réservations");
         }
         booking.cancel(reason);
+        return bookingRepository.save(booking);
+    }
+
+    public Booking cancelBookingByManager(UUID bookingId, UUID managerId, String reason) {
+        Booking booking = getBookingById(bookingId);
+        Field field = booking.getField();
+        if (field == null || field.getOwner() == null || !field.getOwner().getId().equals(managerId)) {
+            throw new BusinessException("Vous ne pouvez annuler que les réservations de vos propres terrains");
+        }
+        booking.cancel(reason != null ? reason : "Annulé par le gérant du terrain");
+        return bookingRepository.save(booking);
+    }
+
+    public Booking confirmBookingByManager(UUID bookingId, UUID managerId) {
+        Booking booking = getBookingById(bookingId);
+        Field field = booking.getField();
+        if (field == null || field.getOwner() == null || !field.getOwner().getId().equals(managerId)) {
+            throw new BusinessException("Vous ne pouvez valider que les réservations de vos propres terrains");
+        }
+        booking.confirm();
         return bookingRepository.save(booking);
     }
 
@@ -118,6 +204,24 @@ public class BookingService {
             throw new BusinessException("Durée minimale : " + MIN_BOOKING_MINUTES + " minutes");
         if (duration.toHours() > MAX_BOOKING_HOURS)
             throw new BusinessException("Durée maximale : " + MAX_BOOKING_HOURS + " heures");
+    }
+
+    private void validateFieldWorkingHours(Field field, OffsetDateTime startAt, OffsetDateTime endAt) {
+        if (field.getOpenTime() == null || field.getCloseTime() == null) return;
+        try {
+            java.time.LocalTime open = java.time.LocalTime.parse(field.getOpenTime());
+            java.time.LocalTime close = java.time.LocalTime.parse(field.getCloseTime());
+            java.time.LocalTime bookingStart = startAt.toLocalTime();
+            java.time.LocalTime bookingEnd = endAt.toLocalTime();
+            if (bookingStart.isBefore(open) || bookingEnd.isAfter(close)) {
+                throw new BusinessException(String.format(
+                        "Ce terrain est ouvert de %s à %s. Votre créneau (%s - %s) est en dehors des horaires d'ouverture.",
+                        field.getOpenTime(), field.getCloseTime(), bookingStart, bookingEnd
+                ));
+            }
+        } catch (java.time.format.DateTimeParseException ignored) {
+            // Ignorer si format personnalisé
+        }
     }
 
     private BigDecimal calcPrice(Field field, OffsetDateTime startAt, OffsetDateTime endAt) {

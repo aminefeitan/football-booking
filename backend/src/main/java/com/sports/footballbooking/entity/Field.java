@@ -90,6 +90,14 @@ public class Field extends BaseEntity {
     @Column(name = "has_parking", nullable = false)
     private boolean hasParking = false;
 
+    @Size(max = 10)
+    @Column(name = "open_time", length = 10, nullable = false)
+    private String openTime = "09:00";
+
+    @Size(max = 10)
+    @Column(name = "close_time", length = 10, nullable = false)
+    private String closeTime = "23:00";
+
     @Column(nullable = false)
     private boolean active = true;
 
@@ -126,6 +134,8 @@ public class Field extends BaseEntity {
     public boolean isHasLights() { return hasLights; }
     public boolean isHasLockerRoom() { return hasLockerRoom; }
     public boolean isHasParking() { return hasParking; }
+    public String getOpenTime() { return openTime != null ? openTime : "09:00"; }
+    public String getCloseTime() { return closeTime != null ? closeTime : "23:00"; }
     public boolean isActive() { return active; }
 
     // ==================== Setters ====================
@@ -147,5 +157,7 @@ public class Field extends BaseEntity {
     public void setHasLights(boolean hasLights) { this.hasLights = hasLights; }
     public void setHasLockerRoom(boolean hasLockerRoom) { this.hasLockerRoom = hasLockerRoom; }
     public void setHasParking(boolean hasParking) { this.hasParking = hasParking; }
+    public void setOpenTime(String openTime) { this.openTime = openTime != null ? openTime : "09:00"; }
+    public void setCloseTime(String closeTime) { this.closeTime = closeTime != null ? closeTime : "23:00"; }
     public void setActive(boolean active) { this.active = active; }
 }

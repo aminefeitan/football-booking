@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, Suspense } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   SoccerBall,
   User,
@@ -13,14 +13,20 @@ import {
   Compass,
   SignOut,
   CaretDown,
+  ShieldCheck,
+  Users,
+  CalendarCheck,
 } from "@phosphor-icons/react";
 import { useAuth } from "@/context/AuthContext";
 import { cn } from "@/lib/utils";
 
-export function TopNav() {
+function TopNavContent() {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, isAuthenticated, isManager, logout } = useAuth();
+  const searchParams = useSearchParams();
+  const currentTab = searchParams.get("tab");
+
+  const { user, isAuthenticated, isManager, isAdmin, logout } = useAuth();
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -44,18 +50,58 @@ export function TopNav() {
     router.push("/");
   };
 
-  const navItems = [
-    { href: "/terrains", label: "Terrains", icon: Compass },
-    { href: "/mes-reservations", label: "Mes Réservations", icon: Ticket },
-    ...(isManager ? [{ href: "/dashboard", label: "Espace Gérant", icon: ChartBar }] : []),
-  ];
+  // ── Navigation dynamique selon le rôle ──────────────────────────────────────
+  let navItems: { href: string; label: string; icon: any }[] = [];
+
+  if (isAdmin) {
+    // ADMIN : ses fonctionnalités directement dans le navbar (aucun catalogue public "Terrains")
+    navItems = [
+      { href: "/admin?tab=users", label: "Utilisateurs", icon: Users },
+      { href: "/admin?tab=fields", label: "Terrains (Admin)", icon: SoccerBall },
+      { href: "/admin?tab=bookings", label: "Réservations & Litiges", icon: Ticket },
+    ];
+  } else if (isManager) {
+    // GÉRANT : ses fonctionnalités directement dans le navbar (aucun catalogue public "Terrains")
+    navItems = [
+      { href: "/dashboard?tab=overview", label: "Tableau de bord", icon: ChartBar },
+      { href: "/dashboard?tab=fields", label: "Mes Terrains", icon: SoccerBall },
+      { href: "/dashboard?tab=bookings", label: "Réservations", icon: CalendarCheck },
+    ];
+  } else if (isAuthenticated) {
+    // JOUEUR CONNECTÉ UNIQUEMENT
+    navItems = [
+      { href: "/terrains", label: "Terrains", icon: Compass },
+      { href: "/mes-reservations", label: "Mes Réservations", icon: Ticket },
+    ];
+  } else {
+    // UTILISATEUR NON AUTHENTIFIÉ : Pas de lien "Terrains" dans le navbar
+    navItems = [];
+  }
+
+  const isLinkActive = (href: string) => {
+    const [path, query] = href.split("?");
+    if (path !== pathname) {
+      if (path === "/terrains" && pathname.startsWith("/terrains")) return true;
+      return false;
+    }
+    if (!query) {
+      return !currentTab;
+    }
+    const targetTab = new URLSearchParams(query).get("tab");
+    if (currentTab === targetTab) return true;
+    if (!currentTab) {
+      if (path === "/admin" && targetTab === "users") return true;
+      if (path === "/dashboard" && targetTab === "overview") return true;
+    }
+    return false;
+  };
 
   return (
     <header className="sticky top-0 z-50 border-b-2 border-encre bg-nuit-pelouse shadow-brutal">
       <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between gap-4">
         {/* 1. GAUCHE : Logo */}
         <Link
-          href="/"
+          href={isAdmin ? "/admin" : isManager ? "/dashboard" : "/"}
           className="flex items-center gap-2 group shrink-0"
           aria-label="FootBook — Accueil"
         >
@@ -70,7 +116,7 @@ export function TopNav() {
         {/* 2. CENTRE : Navigation Desktop */}
         <nav className="hidden md:flex items-center gap-1" aria-label="Navigation principale">
           {navItems.map(({ href, label, icon: Icon }) => {
-            const active = href === "/terrains" ? pathname.startsWith("/terrains") : pathname === href;
+            const active = isLinkActive(href);
             return (
               <Link
                 key={href}
@@ -78,7 +124,11 @@ export function TopNav() {
                 className={cn(
                   "flex items-center gap-1.5 px-3 py-1.5 font-mono text-xs font-bold uppercase tracking-wider border-2 transition-all",
                   active
-                    ? "border-vert-projecteur bg-vert-projecteur text-encre shadow-brutal"
+                    ? isAdmin
+                      ? "border-jaune-carton bg-jaune-carton text-encre shadow-brutal"
+                      : isManager
+                      ? "border-orange-sifflet bg-orange-sifflet text-craie shadow-brutal"
+                      : "border-vert-projecteur bg-vert-projecteur text-encre shadow-brutal"
                     : "border-transparent text-craie/70 hover:text-craie hover:border-encre hover:bg-encre/40"
                 )}
                 aria-current={active ? "page" : undefined}
@@ -110,19 +160,21 @@ export function TopNav() {
                 <span
                   className={cn(
                     "text-[10px] px-1 py-0.2 border uppercase",
-                    isManager
+                    isAdmin
+                      ? "border-jaune-carton text-jaune-carton bg-jaune-carton/10"
+                      : isManager
                       ? "border-orange-sifflet text-orange-sifflet bg-orange-sifflet/10"
                       : "border-vert-projecteur text-vert-projecteur bg-vert-projecteur/10"
                   )}
                 >
-                  {isManager ? "Gérant" : "Joueur"}
+                  {isAdmin ? "Admin" : isManager ? "Gérant" : "Joueur"}
                 </span>
                 <CaretDown size={12} weight="bold" />
               </button>
 
               {/* Dropdown Menu Utilisateur */}
               {dropdownOpen && (
-                <div className="absolute right-0 mt-2 w-52 border-2 border-encre bg-encre shadow-brutal-xl py-1 z-50">
+                <div className="absolute right-0 mt-2 w-56 border-2 border-encre bg-encre shadow-brutal-xl py-1 z-50">
                   <div className="px-3 py-2 border-b border-encre/50">
                     <p className="font-mono text-xs font-bold text-craie truncate">
                       {user.firstName} {user.lastName}
@@ -130,25 +182,77 @@ export function TopNav() {
                     <p className="font-mono text-[10px] text-craie/40 truncate">{user.email}</p>
                   </div>
 
-                  {isManager && (
-                    <Link
-                      href="/dashboard"
-                      onClick={() => setDropdownOpen(false)}
-                      className="flex items-center gap-2 px-3 py-2 text-xs font-mono font-bold uppercase tracking-wider text-orange-sifflet hover:bg-nuit-pelouse transition-colors"
-                    >
-                      <ChartBar size={14} weight="bold" />
-                      Tableau de bord gérant
-                    </Link>
+                  {/* Options ADMIN */}
+                  {isAdmin && (
+                    <>
+                      <Link
+                        href="/admin?tab=users"
+                        onClick={() => setDropdownOpen(false)}
+                        className="flex items-center gap-2 px-3 py-2 text-xs font-mono font-bold uppercase tracking-wider text-jaune-carton hover:bg-nuit-pelouse transition-colors"
+                      >
+                        <Users size={14} weight="bold" />
+                        Gestion Utilisateurs
+                      </Link>
+                      <Link
+                        href="/admin?tab=fields"
+                        onClick={() => setDropdownOpen(false)}
+                        className="flex items-center gap-2 px-3 py-2 text-xs font-mono font-bold uppercase tracking-wider text-jaune-carton hover:bg-nuit-pelouse transition-colors"
+                      >
+                        <SoccerBall size={14} weight="bold" />
+                        Gestion Terrains
+                      </Link>
+                      <Link
+                        href="/admin?tab=bookings"
+                        onClick={() => setDropdownOpen(false)}
+                        className="flex items-center gap-2 px-3 py-2 text-xs font-mono font-bold uppercase tracking-wider text-jaune-carton hover:bg-nuit-pelouse transition-colors"
+                      >
+                        <Ticket size={14} weight="bold" />
+                        Historique & Litiges
+                      </Link>
+                    </>
                   )}
 
-                  <Link
-                    href="/mes-reservations"
-                    onClick={() => setDropdownOpen(false)}
-                    className="flex items-center gap-2 px-3 py-2 text-xs font-mono font-bold uppercase tracking-wider text-craie/80 hover:text-vert-projecteur hover:bg-nuit-pelouse transition-colors"
-                  >
-                    <Ticket size={14} weight="bold" />
-                    Mes réservations
-                  </Link>
+                  {/* Options GÉRANT */}
+                  {isManager && (
+                    <>
+                      <Link
+                        href="/dashboard?tab=overview"
+                        onClick={() => setDropdownOpen(false)}
+                        className="flex items-center gap-2 px-3 py-2 text-xs font-mono font-bold uppercase tracking-wider text-orange-sifflet hover:bg-nuit-pelouse transition-colors"
+                      >
+                        <ChartBar size={14} weight="bold" />
+                        Tableau de bord
+                      </Link>
+                      <Link
+                        href="/dashboard?tab=fields"
+                        onClick={() => setDropdownOpen(false)}
+                        className="flex items-center gap-2 px-3 py-2 text-xs font-mono font-bold uppercase tracking-wider text-orange-sifflet hover:bg-nuit-pelouse transition-colors"
+                      >
+                        <SoccerBall size={14} weight="bold" />
+                        Mes Terrains
+                      </Link>
+                      <Link
+                        href="/dashboard?tab=bookings"
+                        onClick={() => setDropdownOpen(false)}
+                        className="flex items-center gap-2 px-3 py-2 text-xs font-mono font-bold uppercase tracking-wider text-orange-sifflet hover:bg-nuit-pelouse transition-colors"
+                      >
+                        <CalendarCheck size={14} weight="bold" />
+                        Réservations & Planning
+                      </Link>
+                    </>
+                  )}
+
+                  {/* Options JOUEUR */}
+                  {!isAdmin && !isManager && (
+                    <Link
+                      href="/mes-reservations"
+                      onClick={() => setDropdownOpen(false)}
+                      className="flex items-center gap-2 px-3 py-2 text-xs font-mono font-bold uppercase tracking-wider text-craie/80 hover:text-vert-projecteur hover:bg-nuit-pelouse transition-colors"
+                    >
+                      <Ticket size={14} weight="bold" />
+                      Mes réservations
+                    </Link>
+                  )}
 
                   <Link
                     href="/auth"
@@ -209,18 +313,20 @@ export function TopNav() {
               <span
                 className={cn(
                   "text-[10px] px-2 py-0.5 border font-mono font-bold uppercase",
-                  isManager
+                  isAdmin
+                    ? "border-jaune-carton text-jaune-carton bg-jaune-carton/10"
+                    : isManager
                     ? "border-orange-sifflet text-orange-sifflet bg-orange-sifflet/10"
                     : "border-vert-projecteur text-vert-projecteur bg-vert-projecteur/10"
                 )}
               >
-                {isManager ? "Gérant" : "Joueur"}
+                {isAdmin ? "Admin" : isManager ? "Gérant" : "Joueur"}
               </span>
             </div>
           )}
 
           {navItems.map(({ href, label, icon: Icon }) => {
-            const active = href === "/terrains" ? pathname.startsWith("/terrains") : pathname === href;
+            const active = isLinkActive(href);
             return (
               <Link
                 key={href}
@@ -229,7 +335,11 @@ export function TopNav() {
                 className={cn(
                   "flex items-center gap-2.5 px-3 py-2.5 font-mono text-xs font-bold uppercase tracking-wider border-2 transition-all w-full",
                   active
-                    ? "border-vert-projecteur bg-vert-projecteur text-encre shadow-brutal"
+                    ? isAdmin
+                      ? "border-jaune-carton bg-jaune-carton text-encre shadow-brutal"
+                      : isManager
+                      ? "border-orange-sifflet bg-orange-sifflet text-craie shadow-brutal"
+                      : "border-vert-projecteur bg-vert-projecteur text-encre shadow-brutal"
                     : "border-craie/20 text-craie/80 hover:text-craie hover:border-vert-projecteur"
                 )}
               >
@@ -260,5 +370,13 @@ export function TopNav() {
         </div>
       )}
     </header>
+  );
+}
+
+export function TopNav() {
+  return (
+    <Suspense fallback={<header className="h-14 border-b-2 border-encre bg-nuit-pelouse" />}>
+      <TopNavContent />
+    </Suspense>
   );
 }

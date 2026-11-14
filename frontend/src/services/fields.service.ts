@@ -67,3 +67,53 @@ export async function deleteField(id: string): Promise<void> {
   return api<void>(`/fields/${id}`, { method: "DELETE", auth: true });
 }
 
+export interface SlotStatus {
+  time: string;
+  status: "available" | "reserved" | "last_places";
+}
+
+/**
+ * Génère tous les créneaux horaires (tranches d'1h) compris dans l'intervalle de travail
+ * du terrain (openTime -> closeTime).
+ * Pour un nouveau terrain ou sans réservation, TOUS les créneaux sont disponibles ('available').
+ */
+export function generateFieldSlots(
+  openTime: string = "09:00",
+  closeTime: string = "23:00",
+  reservedTimes: string[] = []
+): SlotStatus[] {
+  const [openHour] = openTime.split(":").map(Number);
+  let [closeHour] = closeTime.split(":").map(Number);
+  const startH = isNaN(openHour) ? 9 : openHour;
+  let endH = isNaN(closeHour) ? 23 : closeHour;
+  if (endH <= startH) {
+    endH += 24; // Fermeture après minuit (ex. 00:00 -> 24)
+  }
+
+  const slots: SlotStatus[] = [];
+  for (let h = startH; h < endH; h++) {
+    const formatted = `${String(h % 24).padStart(2, "0")}:00`;
+    const isReserved = reservedTimes.includes(formatted);
+    slots.push({
+      time: formatted,
+      status: isReserved ? "reserved" : "available",
+    });
+  }
+  return slots;
+}
+
+export async function getFieldSlots(
+  fieldId: string,
+  date?: string,
+  fieldFallback?: Field
+): Promise<SlotStatus[]> {
+  try {
+    const query = date ? `?date=${date}` : "";
+    return await api<SlotStatus[]>(`/fields/${fieldId}/slots${query}`);
+  } catch {
+    const openTime = fieldFallback?.openTime || "09:00";
+    const closeTime = fieldFallback?.closeTime || "23:00";
+    return generateFieldSlots(openTime, closeTime, []);
+  }
+}
+

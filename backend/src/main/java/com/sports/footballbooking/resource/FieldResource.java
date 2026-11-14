@@ -24,6 +24,9 @@ public class FieldResource {
     @Inject
     private FieldService fieldService;
 
+    @Inject
+    private com.sports.footballbooking.service.BookingService bookingService;
+
     @GET
     public Response getFields(
             @QueryParam("city") String city,
@@ -43,6 +46,17 @@ public class FieldResource {
     @Path("/{id}")
     public Response getField(@PathParam("id") UUID id) {
         return Response.ok(fieldService.getFieldById(id)).build();
+    }
+
+    @GET
+    @Path("/{id}/slots")
+    public Response getFieldSlots(
+            @PathParam("id") UUID id,
+            @QueryParam("date") String dateStr) {
+        java.time.LocalDate date = (dateStr != null && !dateStr.isBlank())
+                ? java.time.LocalDate.parse(dateStr)
+                : java.time.LocalDate.now();
+        return Response.ok(bookingService.getFieldSlots(id, date)).build();
     }
 
     @POST

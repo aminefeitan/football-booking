@@ -13,6 +13,7 @@ com\sports\footballbooking\service\TeamService$AddMemberRequest.class
 com\sports\footballbooking\entity\Payment.class
 com\sports\footballbooking\config\JwtService$JwtClaims.class
 com\sports\footballbooking\config\JwtService.class
+com\sports\footballbooking\config\EnvLoader.class
 com\sports\footballbooking\entity\Booking.class
 com\sports\footballbooking\repository\UserRepository.class
 com\sports\footballbooking\service\AuthService.class
@@ -23,6 +24,7 @@ com\sports\footballbooking\entity\Field.class
 com\sports\footballbooking\service\AuthService$1.class
 com\sports\footballbooking\service\AuthService$LoginRequest.class
 com\sports\footballbooking\config\AuthFilter.class
+com\sports\footballbooking\service\BookingService$SlotDto.class
 com\sports\footballbooking\entity\BaseEntity.class
 com\sports\footballbooking\resource\MatchResource.class
 com\sports\footballbooking\exception\BusinessException.class

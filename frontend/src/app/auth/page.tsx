@@ -20,6 +20,7 @@ import {
   SignOut,
   Compass,
   CheckCircle,
+  WarningCircle,
 } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/Button";
 import { useAuth } from "@/context/AuthContext";
@@ -134,16 +135,25 @@ function AuthContent() {
   const handleLogin = LF.handleSubmit(async (data: LoginForm) => {
     try {
       setError(null);
-      const res = await login(data);
+      const res = await login({
+        email: data.email.trim(),
+        password: data.password.trim(),
+      });
       if (redirectTarget) {
         router.push(redirectTarget);
+      } else if (res.user.role === "ADMIN") {
+        router.push("/admin");
       } else if (res.user.role === "FIELD_MANAGER") {
         router.push("/dashboard");
       } else {
         router.push("/terrains");
       }
-    } catch {
-      setError("Email ou mot de passe incorrect.");
+    } catch (err: unknown) {
+      if (err instanceof Error && err.message) {
+        setError(err.message);
+      } else {
+        setError("Email ou mot de passe incorrect.");
+      }
     }
   });
 
@@ -153,13 +163,19 @@ function AuthContent() {
       const res = await registerUser(data);
       if (redirectTarget) {
         router.push(redirectTarget);
+      } else if (res.user.role === "ADMIN") {
+        router.push("/admin");
       } else if (res.user.role === "FIELD_MANAGER") {
         router.push("/dashboard");
       } else {
         router.push("/terrains");
       }
-    } catch {
-      setError("Erreur d'inscription. Vérifiez vos informations.");
+    } catch (err: unknown) {
+      if (err instanceof Error && err.message) {
+        setError(err.message);
+      } else {
+        setError("Erreur d'inscription. Vérifiez vos informations.");
+      }
     }
   });
 
@@ -320,9 +336,14 @@ function AuthContent() {
 
           {/* Erreur */}
           {error && (
-            <div className="border-2 border-orange-sifflet bg-orange-sifflet/10 text-orange-sifflet px-3 py-2 font-mono text-xs">
-              {error}
-            </div>
+            <motion.div
+              initial={{ opacity: 0, y: -6 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="border-2 border-orange-sifflet bg-orange-sifflet/15 text-orange-sifflet px-3.5 py-2.5 font-mono text-xs font-bold shadow-brutal flex items-center gap-2.5"
+            >
+              <WarningCircle size={18} weight="bold" className="shrink-0" />
+              <span>{error}</span>
+            </motion.div>
           )}
 
           <AnimatePresence mode="wait">
