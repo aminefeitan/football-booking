@@ -148,9 +148,15 @@ public class JwtService {
     }
 
     private static String resolveSecretKey() {
-        String envKey = System.getenv("JWT_SECRET");
-        if (envKey != null && !envKey.isBlank()) {
-            return envKey;
+        try (var in = JwtService.class.getClassLoader().getResourceAsStream("META-INF/microprofile-config.properties")) {
+            if (in != null) {
+                java.util.Properties props = new java.util.Properties();
+                props.load(in);
+                String val = props.getProperty("jwt.secret");
+                if (val != null && !val.isBlank()) return val.trim();
+            }
+        } catch (Exception ignored) {
+            // Fallback si fichier absent
         }
         String propKey = System.getProperty("jwt.secret");
         if (propKey != null && !propKey.isBlank()) {
