@@ -61,16 +61,20 @@ function TopNavContent() {
       { href: "/admin?tab=bookings", label: "Réservations & Litiges", icon: Ticket },
     ];
   } else if (isManager) {
-    // GÉRANT : ses fonctionnalités directement dans le navbar (aucun catalogue public "Terrains")
+    // GÉRANT : ses fonctionnalités directement dans le navbar
     navItems = [
       { href: "/dashboard?tab=overview", label: "Tableau de bord", icon: ChartBar },
       { href: "/dashboard?tab=fields", label: "Mes Terrains", icon: SoccerBall },
       { href: "/dashboard?tab=bookings", label: "Réservations", icon: CalendarCheck },
+      { href: "/dashboard?tab=matches", label: "Matchs", icon: SoccerBall },
+      { href: "/dashboard?tab=teams", label: "Équipes", icon: Users },
     ];
   } else if (isAuthenticated) {
     // JOUEUR CONNECTÉ UNIQUEMENT
     navItems = [
       { href: "/terrains", label: "Terrains", icon: Compass },
+      { href: "/matches", label: "Matchs", icon: SoccerBall },
+      { href: "/equipes", label: "Équipes", icon: Users },
       { href: "/mes-reservations", label: "Mes Réservations", icon: Ticket },
     ];
   } else {
@@ -255,7 +259,7 @@ function TopNavContent() {
                   )}
 
                   <Link
-                    href="/auth"
+                    href="/profil"
                     onClick={() => setDropdownOpen(false)}
                     className="flex items-center gap-2 px-3 py-2 text-xs font-mono font-bold uppercase tracking-wider text-craie/80 hover:text-vert-projecteur hover:bg-nuit-pelouse transition-colors"
                   >

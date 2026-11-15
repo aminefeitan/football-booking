@@ -4,6 +4,7 @@
 microprofile-config.properties
 **/microprofile-config.properties
 !microprofile-config.properties.example
+standalone.conf
 
 # ==============================================================================
 # BUILD ARTIFACTS
@@ -14,6 +15,7 @@ target/
 *.war
 *.ear
 *.jar
+
 out/
 **/out/
 

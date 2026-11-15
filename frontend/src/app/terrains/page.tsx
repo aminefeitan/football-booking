@@ -22,9 +22,9 @@ import { cn } from "@/lib/utils";
 
 const FORMAT_OPTIONS = [
   { value: "", label: "Tous formats" },
-  { value: "FIVE_ASIDE", label: "5 vs 5" },
-  { value: "SEVEN_ASIDE", label: "7 vs 7" },
-  { value: "ELEVEN_ASIDE", label: "11 vs 11" },
+  { value: "5v5", label: "5 vs 5" },
+  { value: "7v7", label: "7 vs 7" },
+  { value: "11v11", label: "11 vs 11" },
 ];
 
 const PRICE_OPTIONS = [

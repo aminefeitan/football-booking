@@ -1,7 +1,6 @@
 package com.sports.footballbooking.config;
 
 import jakarta.annotation.Resource;
-import jakarta.annotation.sql.DataSourceDefinition;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.context.Initialized;
 import jakarta.enterprise.event.Observes;
@@ -11,13 +10,6 @@ import javax.sql.DataSource;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-@DataSourceDefinition(
-    name = "java:jboss/datasources/FootballBookingDS",
-    className = "org.postgresql.ds.PGSimpleDataSource",
-    url = "${db.url:jdbc:postgresql://localhost:5432/football_booking?stringtype=unspecified}",
-    user = "${db.user:postgres}",
-    password = "${db.password:postgres}"
-)
 @ApplicationScoped
 public class FlywayMigrator {
 

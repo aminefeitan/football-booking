@@ -13,13 +13,27 @@ export function formatPrice(amount: number, currency = "EUR"): string {
   }).format(amount);
 }
 
-export function formatDate(dateStr: string): string {
-  if (!dateStr) return "—";
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) {
-    // Si c'est juste "YYYY-MM-DD", essayer de parser
-    return dateStr;
+function parseDateInput(input: string | number | undefined | null): Date | null {
+  if (input === null || input === undefined || input === "") return null;
+  if (typeof input === "number") {
+    const ms = input < 1e11 ? input * 1000 : input;
+    const d = new Date(ms);
+    return isNaN(d.getTime()) ? null : d;
   }
+  const str = String(input).trim();
+  if (/^\d+(\.\d+)?$/.test(str)) {
+    const num = parseFloat(str);
+    const ms = num < 1e11 ? num * 1000 : num;
+    const d = new Date(ms);
+    if (!isNaN(d.getTime())) return d;
+  }
+  const d = new Date(str);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+export function formatDate(dateStr: string | number): string {
+  const d = parseDateInput(dateStr);
+  if (!d) return typeof dateStr === "string" ? dateStr : "—";
   return new Intl.DateTimeFormat("fr-FR", {
     weekday: "long",
     day: "numeric",
@@ -28,13 +42,14 @@ export function formatDate(dateStr: string): string {
   }).format(d);
 }
 
-export function formatTime(dateStr: string): string {
-  if (!dateStr) return "—";
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) {
-    // Si dateStr est déjà un horaire comme "19:00" ou a un format spécial
-    const timeMatch = dateStr.match(/(\d{2}:\d{2})/);
-    return timeMatch ? timeMatch[1] : dateStr;
+export function formatTime(dateStr: string | number): string {
+  const d = parseDateInput(dateStr);
+  if (!d) {
+    if (typeof dateStr === "string") {
+      const timeMatch = dateStr.match(/(\d{2}:\d{2})/);
+      return timeMatch ? timeMatch[1] : dateStr;
+    }
+    return "—";
   }
   return new Intl.DateTimeFormat("fr-FR", {
     hour: "2-digit",
@@ -47,6 +62,9 @@ export function formatFieldType(type: string): string {
     FIVE_ASIDE: "5 vs 5",
     SEVEN_ASIDE: "7 vs 7",
     ELEVEN_ASIDE: "11 vs 11",
+    "5v5": "5 vs 5",
+    "7v7": "7 vs 7",
+    "11v11": "11 vs 11",
   };
   return map[type] ?? type;
 }

@@ -123,11 +123,22 @@ public class BookingService {
 
         List<SlotDto> slots = new ArrayList<>();
         LocalDate queryDate = date != null ? date : LocalDate.now();
+        LocalDate today = LocalDate.now();
+        LocalTime nowTime = LocalTime.now();
 
         for (int h = startHour; h < endHour; h++) {
             int currentHour = h % 24;
-            String timeFormatted = String.format("%02d:00", currentHour);
             LocalDate slotDate = (h >= 24) ? queryDate.plusDays(1) : queryDate;
+
+            // Ne pas afficher les créneaux déjà passés (date passée ou heure déjà écoulée aujourd'hui)
+            if (slotDate.isBefore(today)) {
+                continue;
+            }
+            if (slotDate.isEqual(today) && currentHour <= nowTime.getHour()) {
+                continue;
+            }
+
+            String timeFormatted = String.format("%02d:00", currentHour);
 
             // Début et fin du créneau horaire
             OffsetDateTime slotStart = slotDate.atTime(currentHour, 0).atOffset(ZoneOffset.UTC);

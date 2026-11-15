@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app xmlns="https://jakarta.ee/xml/ns/jakartaee"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee https://jakarta.ee/xml/ns/jakartaee/web-app_6_0.xsd"
+         version="6.0">
+
+    <data-source>
+        <name>java:jboss/datasources/FootballBookingDS</name>
+        <class-name>org.postgresql.ds.PGSimpleDataSource</class-name>
+        <url>${db.url:jdbc:postgresql://localhost:5432/football_booking?stringtype=unspecified}</url>
+        <user>${db.user:postgres}</user>
+        <password>${db.password:postgres}</password>
+    </data-source>
+
+</web-app>

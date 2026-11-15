@@ -80,7 +80,8 @@ export interface SlotStatus {
 export function generateFieldSlots(
   openTime: string = "09:00",
   closeTime: string = "23:00",
-  reservedTimes: string[] = []
+  reservedTimes: string[] = [],
+  date?: string
 ): SlotStatus[] {
   const [openHour] = openTime.split(":").map(Number);
   let [closeHour] = closeTime.split(":").map(Number);
@@ -90,9 +91,27 @@ export function generateFieldSlots(
     endH += 24; // Fermeture après minuit (ex. 00:00 -> 24)
   }
 
+  const now = new Date();
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  const isToday = !date || date === todayStr;
+  const isPast = Boolean(date && date < todayStr);
+  const currentHour = now.getHours();
+
+  if (isPast) {
+    return [];
+  }
+
   const slots: SlotStatus[] = [];
   for (let h = startH; h < endH; h++) {
-    const formatted = `${String(h % 24).padStart(2, "0")}:00`;
+    const currentH = h % 24;
+
+    // Si la date est aujourd'hui et que le créneau est sur la journée actuelle (h < 24),
+    // on masque les heures déjà passées ou en cours
+    if (isToday && h < 24 && currentH <= currentHour) {
+      continue;
+    }
+
+    const formatted = `${String(currentH).padStart(2, "0")}:00`;
     const isReserved = reservedTimes.includes(formatted);
     slots.push({
       time: formatted,
@@ -107,13 +126,31 @@ export async function getFieldSlots(
   date?: string,
   fieldFallback?: Field
 ): Promise<SlotStatus[]> {
+  const now = new Date();
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  const isToday = !date || date === todayStr;
+  const isPast = Boolean(date && date < todayStr);
+  const currentHour = now.getHours();
+
+  if (isPast) {
+    return [];
+  }
+
   try {
     const query = date ? `?date=${date}` : "";
-    return await api<SlotStatus[]>(`/fields/${fieldId}/slots${query}`);
+    const res = await api<SlotStatus[]>(`/fields/${fieldId}/slots${query}`);
+    // Filtrage de sécurité côté client : pour aujourd'hui, ne garder que les heures futures
+    if (isToday && Array.isArray(res)) {
+      return res.filter((s) => {
+        const [slotH] = s.time.split(":").map(Number);
+        return slotH > currentHour;
+      });
+    }
+    return res;
   } catch {
     const openTime = fieldFallback?.openTime || "09:00";
     const closeTime = fieldFallback?.closeTime || "23:00";
-    return generateFieldSlots(openTime, closeTime, []);
+    return generateFieldSlots(openTime, closeTime, [], date);
   }
 }
 

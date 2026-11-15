@@ -48,7 +48,7 @@ export function FieldCard({ field, onClick, className }: FieldCardProps) {
 
         {/* Prix */}
         <div className="absolute bottom-2 right-2 bg-vert-projecteur text-encre border border-encre px-2 py-0.5">
-          <span className="font-mono font-black text-sm">{formatPrice(field.pricePerHour)}</span>
+          <span className="font-mono font-black text-sm">{formatPrice(field.pricePerHour, field.currency)}</span>
           <span className="font-mono text-xs">/h</span>
         </div>
 

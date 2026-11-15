@@ -7,6 +7,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.Size;
 
+
 /**
  * Concrete entity representing a system administrator.
  */

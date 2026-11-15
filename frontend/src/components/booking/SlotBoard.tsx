@@ -21,6 +21,19 @@ const CFG = {
 };
 
 export function SlotBoard({ slots, selectedTime, onSelect, className }: SlotBoardProps) {
+  if (!slots || slots.length === 0) {
+    return (
+      <div className={cn("border-2 border-dashed border-craie/20 p-6 text-center bg-encre/40", className)}>
+        <p className="font-mono text-sm text-craie/60 font-semibold">
+          Aucun créneau disponible pour cette date.
+        </p>
+        <p className="font-mono text-xs text-craie/40 mt-1">
+          Tous les créneaux d'aujourd'hui sont déjà passés ou réservés. Veuillez choisir une autre date.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className={cn("grid grid-cols-3 sm:grid-cols-4 gap-2", className)} role="listbox" aria-label="Créneaux horaires">
       {slots.map((slot) => {
