@@ -13,7 +13,6 @@ com\sports\footballbooking\service\TeamService$AddMemberRequest.class
 com\sports\footballbooking\entity\Payment.class
 com\sports\footballbooking\config\JwtService$JwtClaims.class
 com\sports\footballbooking\config\JwtService.class
-com\sports\footballbooking\config\EnvLoader.class
 com\sports\footballbooking\entity\Booking.class
 com\sports\footballbooking\repository\UserRepository.class
 com\sports\footballbooking\service\AuthService.class
