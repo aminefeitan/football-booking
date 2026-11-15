@@ -4,6 +4,7 @@ com\sports\footballbooking\service\PaymentService$PaymentRequest.class
 com\sports\footballbooking\service\BookingService$CreateBookingRequest.class
 com\sports\footballbooking\repository\MatchRepository.class
 com\sports\footballbooking\config\CorsFilter.class
+com\sports\footballbooking\resource\ManagerResource$ManagerCancelRequest.class
 com\sports\footballbooking\service\AuthService$AuthResponse.class
 com\sports\footballbooking\config\SecurityUtils.class
 com\sports\footballbooking\entity\User.class
@@ -21,6 +22,7 @@ com\sports\footballbooking\resource\FieldResource.class
 com\sports\footballbooking\service\MatchService$CreateMatchRequest.class
 com\sports\footballbooking\entity\Field.class
 com\sports\footballbooking\service\AuthService$1.class
+com\sports\footballbooking\resource\AdminResource$ToggleFieldRequest.class
 com\sports\footballbooking\service\AuthService$LoginRequest.class
 com\sports\footballbooking\config\AuthFilter.class
 com\sports\footballbooking\service\BookingService$SlotDto.class
@@ -33,6 +35,7 @@ com\sports\footballbooking\resource\BookingResource.class
 com\sports\footballbooking\service\TeamService$CreateTeamRequest.class
 com\sports\footballbooking\config\AuthFilter$1.class
 com\sports\footballbooking\repository\BaseRepository.class
+com\sports\footballbooking\resource\ManagerResource$DashboardStats.class
 com\sports\footballbooking\entity\MatchParticipant.class
 com\sports\footballbooking\repository\TeamRepository.class
 com\sports\footballbooking\resource\TeamResource$InviteRequest.class
@@ -45,12 +48,16 @@ com\sports\footballbooking\service\AuthService$RegisterRequest.class
 com\sports\footballbooking\resource\PlayerResource.class
 com\sports\footballbooking\repository\BookingRepository.class
 com\sports\footballbooking\entity\Player.class
+com\sports\footballbooking\resource\AdminResource$UpdateStatusRequest.class
+com\sports\footballbooking\resource\AdminResource.class
 com\sports\footballbooking\exception\ApiExceptionMapper.class
 com\sports\footballbooking\service\FieldService.class
 com\sports\footballbooking\HelloApplication.class
 com\sports\footballbooking\repository\PlayerRepository.class
 com\sports\footballbooking\service\PlayerService$UpdateProfileRequest.class
 com\sports\footballbooking\service\MatchService$JoinMatchRequest.class
+com\sports\footballbooking\resource\ManagerResource$ToggleFieldRequest.class
+com\sports\footballbooking\resource\ManagerResource.class
 com\sports\footballbooking\resource\AuthResource.class
 com\sports\footballbooking\entity\User$Role.class
 com\sports\footballbooking\entity\TeamInvitation.class

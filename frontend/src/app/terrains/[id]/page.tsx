@@ -184,7 +184,7 @@ export default function TerrainDetailPage({ params }: Props) {
             <div className="sticky top-16 border-2 border-encre bg-encre shadow-brutal-lg p-4 space-y-4">
               <div>
                 <div className="font-mono font-black text-3xl text-vert-projecteur leading-none">
-                  {formatPrice(field.pricePerHour)}
+                  {formatPrice(field.pricePerHour, field.currency)}
                   <span className="text-sm text-craie/40">/h</span>
                 </div>
                 <div className="text-[10px] font-bold text-craie/30 uppercase tracking-widest font-mono mt-1">

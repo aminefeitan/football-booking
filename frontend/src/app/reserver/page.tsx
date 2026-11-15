@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
@@ -13,7 +13,7 @@ import { Stepper } from "@/components/ui/Stepper";
 import { Button } from "@/components/ui/Button";
 import { SlotBoard } from "@/components/booking/SlotBoard";
 import { PitchPicker } from "@/components/booking/PitchPicker";
-import { getFieldById, getFieldSlots } from "@/services/fields.service";
+import { getFields, getFieldById, getFieldSlots } from "@/services/fields.service";
 import { createBooking } from "@/services/bookings.service";
 import { processPayment } from "@/services/payments.service";
 import { MOCK_FIELDS } from "@/lib/mock-data";
@@ -49,6 +49,12 @@ function BookingContent() {
   const [selectedTime, setSelectedTime] = useState<string | undefined>(paramTime ?? undefined);
   const [inviteCopied, setInviteCopied] = useState(false);
   const [bookingId, setBookingId] = useState<string | undefined>();
+  const [paymentError, setPaymentError] = useState<string | undefined>();
+
+  const { data: allFields = [], isLoading: fieldsLoading } = useQuery({
+    queryKey: ["all-fields"],
+    queryFn: () => getFields(),
+  });
 
   const { data: selectedField } = useQuery({
     queryKey: ["field", selectedFieldId],
@@ -62,16 +68,33 @@ function BookingContent() {
     enabled: !!selectedFieldId,
   });
 
+  // Si le créneau précédemment sélectionné n'est plus disponible (ex: heure passée), on le désélectionne
+  useEffect(() => {
+    if (selectedTime && slots.length > 0 && !slots.some((s) => s.time === selectedTime && s.status === "available")) {
+      setSelectedTime(undefined);
+    }
+  }, [slots, selectedTime]);
+
   const { register, handleSubmit, formState: { errors } } = useForm<PaymentForm>({
     resolver: zodResolver(paymentSchema),
     defaultValues: { paymentMethod: "CARD" },
   });
 
   const bookingMutation = useMutation({
-    mutationFn: createBooking,
+    mutationFn: async (vars: { fieldId: string; startAt: string; endAt: string; notes?: string; paymentMethod: "CARD" | "CASH" | "TRANSFER" }) => {
+      const { paymentMethod, ...bookingPayload } = vars;
+      const booking = await createBooking(bookingPayload);
+      await processPayment({ bookingId: booking.id, paymentMethod });
+      return booking;
+    },
     onSuccess: (booking) => {
       setBookingId(booking.id);
+      setPaymentError(undefined);
       setStep(3); // success
+    },
+    onError: (err: unknown) => {
+      const message = err instanceof Error ? err.message : "Le paiement a échoué. Veuillez réessayer.";
+      setPaymentError(message);
     },
   });
 
@@ -157,16 +180,18 @@ function BookingContent() {
       return;
     }
     if (!selectedFieldId || !selectedTime) return;
-    const startAt = `${selectedDate}T${selectedTime}:00`;
-    const endAtDate = new Date(`${selectedDate}T${selectedTime}:00`);
-    endAtDate.setHours(endAtDate.getHours() + 1);
-    const endAt = endAtDate.toISOString().slice(0, 19);
+    setPaymentError(undefined);
+    const startAtDate = new Date(`${selectedDate}T${selectedTime}:00`);
+    const startAt = startAtDate.toISOString();
+    const endAtDate = new Date(startAtDate.getTime() + 60 * 60 * 1000);
+    const endAt = endAtDate.toISOString();
 
     bookingMutation.mutate({
       fieldId: selectedFieldId,
       startAt,
       endAt,
       notes: data.notes,
+      paymentMethod: data.paymentMethod,
     });
   });
 
@@ -212,37 +237,50 @@ function BookingContent() {
                   <h2 className="font-display font-black text-craie uppercase text-2xl">
                     1. Choisir un terrain
                   </h2>
-                  <PitchPicker
-                    zones={MOCK_FIELDS.slice(0, 3).map((f, i) => ({
-                      id: f.id,
-                      label: f.name,
-                      status: i === 0 ? "available" : i === 1 ? "last_places" : "reserved",
-                      x: 10 + i * 135,
-                      y: 20,
-                      w: 120,
-                      h: 100,
-                    }))}
-                    selectedZone={selectedFieldId}
-                    onSelect={handleFieldSelect}
-                    className="mb-4"
-                  />
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {MOCK_FIELDS.slice(0, 4).map((field) => (
-                      <button
-                        key={field.id}
-                        onClick={() => handleFieldSelect(field.id)}
-                        className={`border-2 p-4 text-left transition-all ${
-                          selectedFieldId === field.id
-                            ? "border-vert-projecteur bg-vert-projecteur/10 shadow-brutal-green"
-                            : "border-encre/40 hover:border-craie/50"
-                        }`}
-                      >
-                        <div className="font-display font-black text-craie text-lg uppercase">{field.name}</div>
-                        <div className="font-mono text-vert-projecteur font-bold">{formatPrice(field.pricePerHour)}/h</div>
-                        <div className="text-xs text-craie/50 font-mono mt-1">{field.city} · {formatFieldType(field.fieldType)}</div>
-                      </button>
-                    ))}
-                  </div>
+                  {fieldsLoading ? (
+                    <div className="font-mono text-sm text-vert-projecteur animate-pulse py-6">
+                      Chargement des terrains depuis la base de données...
+                    </div>
+                  ) : allFields.length === 0 ? (
+                    <div className="border-2 border-encre bg-encre p-8 text-center shadow-brutal font-mono text-sm text-craie/60">
+                      Aucun terrain enregistré dans la base de données pour le moment.
+                    </div>
+                  ) : (
+                    <>
+                      <PitchPicker
+                        zones={allFields.slice(0, 3).map((f, i) => ({
+                          id: f.id,
+                          label: f.name,
+                          status: i === 0 ? "available" : i === 1 ? "last_places" : "reserved",
+                          x: 10 + i * 135,
+                          y: 20,
+                          w: 120,
+                          h: 100,
+                        }))}
+                        selectedZone={selectedFieldId}
+                        onSelect={handleFieldSelect}
+                        className="mb-4"
+                      />
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {allFields.map((field) => (
+                          <button
+                            key={field.id}
+                            type="button"
+                            onClick={() => handleFieldSelect(field.id)}
+                            className={`border-2 p-4 text-left transition-all ${
+                              selectedFieldId === field.id
+                                ? "border-vert-projecteur bg-vert-projecteur/10 shadow-brutal-green"
+                                : "border-encre/40 hover:border-craie/50"
+                            }`}
+                          >
+                            <div className="font-display font-black text-craie text-lg uppercase">{field.name}</div>
+                            <div className="font-mono text-vert-projecteur font-bold">{formatPrice(field.pricePerHour, field.currency)}/h</div>
+                            <div className="text-xs text-craie/50 font-mono mt-1">{field.city} · {formatFieldType(field.fieldType)}</div>
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
                 </motion.div>
               )}
 
@@ -377,6 +415,12 @@ function BookingContent() {
                       </div>
                     )}
 
+                    {paymentError && (
+                      <div className="border-2 border-rouge-carton bg-rouge-carton/10 p-4 font-mono text-sm text-rouge-carton uppercase tracking-widest shadow-brutal">
+                        ⚠ {paymentError}
+                      </div>
+                    )}
+
                     <div className="flex gap-4">
                       <Button variant="ghost" type="button" onClick={() => setStep(1)}>Retour</Button>
                       <Button
@@ -451,7 +495,7 @@ function BookingContent() {
                       <div className="flex justify-between items-center">
                         <span className="text-craie/60 font-mono text-sm">Total</span>
                         <span className="font-mono font-black text-2xl text-vert-projecteur">
-                          {formatPrice(totalAmount)}
+                          {formatPrice(totalAmount, selectedField.currency ?? "EUR")}
                         </span>
                       </div>
                     </div>

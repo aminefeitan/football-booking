@@ -64,7 +64,8 @@ public class Match extends BaseEntity {
     @Column(length = 100)
     private String city;
 
-    @OneToMany(mappedBy = "match", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "match", fetch = FetchType.EAGER)
+    @JsonIgnoreProperties({"match"})
     private List<MatchParticipant> participants = new ArrayList<>();
 
     public Match() {}
@@ -102,5 +103,14 @@ public class Match extends BaseEntity {
     public String getCity() { return city; }
     public void setCity(String city) { this.city = city; }
     public List<MatchParticipant> getParticipants() { return participants; }
-    public void setParticipants(List<MatchParticipant> participants) { this.participants = participants; }
+    public void setParticipants(List<MatchParticipant> participants) {
+        if (this.participants == null) {
+            this.participants = new ArrayList<>();
+        } else {
+            this.participants.clear();
+        }
+        if (participants != null) {
+            this.participants.addAll(participants);
+        }
+    }
 }

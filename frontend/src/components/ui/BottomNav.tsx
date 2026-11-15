@@ -36,15 +36,17 @@ function BottomNavContent() {
       { href: "/dashboard?tab=overview", icon: ChartBar, label: "Dashboard" },
       { href: "/dashboard?tab=fields", icon: SoccerBall, label: "Terrains" },
       { href: "/dashboard?tab=bookings", icon: CalendarCheck, label: "Résas" },
-      { href: "/auth", icon: User, label: "Profil" },
+      { href: "/dashboard?tab=matches", icon: SoccerBall, label: "Matchs" },
+      { href: "/dashboard?tab=teams", icon: Users, label: "Équipes" },
     ];
   } else if (isAuthenticated) {
     // JOUEUR CONNECTÉ UNIQUEMENT
     navItems = [
-      { href: "/", icon: House, label: "Accueil" },
       { href: "/terrains", icon: MagnifyingGlass, label: "Terrains" },
+      { href: "/matches", icon: SoccerBall, label: "Matchs" },
+      { href: "/equipes", icon: Users, label: "Équipes" },
       { href: "/mes-reservations", icon: Ticket, label: "Résa" },
-      { href: "/auth", icon: User, label: "Profil" },
+      { href: "/profil", icon: User, label: "Profil" },
     ];
   } else {
     // UTILISATEUR NON AUTHENTIFIÉ : Pas de "Terrains" dans la barre de navigation

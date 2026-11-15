@@ -43,7 +43,8 @@ public class Team extends BaseEntity {
     @Column(nullable = false)
     private boolean active = true;
 
-    @OneToMany(mappedBy = "team", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "team", fetch = FetchType.EAGER)
+    @JsonIgnoreProperties({"team"})
     private List<TeamMember> members = new ArrayList<>();
 
     public Team() {}
@@ -70,5 +71,14 @@ public class Team extends BaseEntity {
     public boolean isActive() { return active; }
     public void setActive(boolean active) { this.active = active; }
     public List<TeamMember> getMembers() { return members; }
-    public void setMembers(List<TeamMember> members) { this.members = members; }
+    public void setMembers(List<TeamMember> members) {
+        if (this.members == null) {
+            this.members = new ArrayList<>();
+        } else {
+            this.members.clear();
+        }
+        if (members != null) {
+            this.members.addAll(members);
+        }
+    }
 }
