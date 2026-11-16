@@ -14,6 +14,9 @@ import {
   UserPlus,
   Shield,
   Trash,
+  MagnifyingGlass,
+  Warning,
+  X,
 } from "@phosphor-icons/react";
 import { useAuth } from "@/context/AuthContext";
 import {
@@ -21,6 +24,8 @@ import {
   removeTeamMember,
   invitePlayerToTeam,
 } from "@/services/teams.service";
+import { searchPlayers } from "@/services/players.service";
+import type { Player } from "@/lib/types";
 import { Button } from "@/components/ui/Button";
 
 interface PageProps {
@@ -33,21 +38,43 @@ export default function TeamDetailPage({ params }: PageProps) {
   const qc = useQueryClient();
   const { user, isAuthenticated } = useAuth();
 
-  const [inviteUserId, setInviteUserId] = useState("");
+  const [searchName, setSearchName] = useState("");
+  const [invitingPlayerId, setInvitingPlayerId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const { data: team, isLoading, error } = useQuery({
     queryKey: ["team", id],
     queryFn: () => getTeamById(id),
   });
 
+  const { data: allPlayers = [] } = useQuery({
+    queryKey: ["players", searchName],
+    queryFn: () => searchPlayers(searchName.trim() || undefined),
+    enabled: Boolean(user),
+  });
+
   const inviteMut = useMutation({
-    mutationFn: () => invitePlayerToTeam(id, inviteUserId),
-    onSuccess: () => {
+    mutationFn: ({ userId, name }: { userId?: string; name?: string }) => {
+      if (userId) {
+        return invitePlayerToTeam(id, { invitedUserId: userId });
+      }
+      return invitePlayerToTeam(id, { playerName: name });
+    },
+    onSuccess: (_, variables) => {
       qc.invalidateQueries({ queryKey: ["team", id] });
-      setInviteUserId("");
-      setFeedback("Invitation envoyée avec succès !");
-      setTimeout(() => setFeedback(null), 3000);
+      setSearchName("");
+      setInvitingPlayerId(null);
+      setErrorMessage(null);
+      const targetLabel = variables.name ? ` à ${variables.name}` : "";
+      setFeedback(`Invitation envoyée avec succès${targetLabel} !`);
+      setTimeout(() => setFeedback(null), 3500);
+    },
+    onError: (err: unknown) => {
+      setInvitingPlayerId(null);
+      const msg = err instanceof Error ? err.message : "Erreur lors de l'envoi de l'invitation";
+      setErrorMessage(msg);
+      setTimeout(() => setErrorMessage(null), 4000);
     },
   });
 
@@ -98,6 +125,17 @@ export default function TeamDetailPage({ params }: PageProps) {
   const isFull = members.length >= max;
   const isCaptain = user && team.creator?.id === user.id;
   const isMember = user && members.some((m) => m.user?.id === user.id);
+  const memberUserIds = new Set(members.map((m) => m.user?.id).filter(Boolean));
+
+  const matchingPlayers = allPlayers.filter((p) => {
+    if (!p) return false;
+    if (!searchName.trim()) return false;
+    const q = searchName.toLowerCase().trim();
+    const fullName = `${p.firstName ?? ""} ${p.lastName ?? ""}`.toLowerCase();
+    const reverseName = `${p.lastName ?? ""} ${p.firstName ?? ""}`.toLowerCase();
+    const email = (p.email ?? "").toLowerCase();
+    return fullName.includes(q) || reverseName.includes(q) || email.includes(q);
+  });
 
   return (
     <div className="min-h-screen bg-nuit-pelouse pb-20">
@@ -156,28 +194,159 @@ export default function TeamDetailPage({ params }: PageProps) {
 
           {/* Invitation form (capitaine) */}
           {isCaptain && !isFull && (
-            <div className="border-2 border-vert-projecteur bg-vert-projecteur/5 p-4 mb-6">
-              <div className="font-mono text-xs font-bold text-vert-projecteur uppercase mb-2">
-                Inviter un joueur par son ID utilisateur
+            <div className="border-2 border-vert-projecteur bg-vert-projecteur/5 p-5 mb-8 shadow-brutal space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                <div className="font-mono text-xs font-bold text-vert-projecteur uppercase flex items-center gap-2">
+                  <UserPlus size={18} weight="bold" />
+                  Inviter un joueur par son nom et prénom
+                </div>
+                <span className="font-mono text-[11px] text-craie/40">
+                  Recherche dans l&apos;annuaire des joueurs
+                </span>
               </div>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="ID UUID du joueur (ex: 550e8400-e29b-...)"
-                  value={inviteUserId}
-                  onChange={(e) => setInviteUserId(e.target.value)}
-                  className="bg-nuit-pelouse border-2 border-encre text-craie px-3 py-1.5 font-mono text-xs flex-1 focus:border-vert-projecteur focus:outline-none"
-                />
-                <Button
-                  variant="primary"
-                  size="sm"
-                  disabled={!inviteUserId.trim()}
-                  onClick={() => inviteMut.mutate()}
-                  loading={inviteMut.isPending}
-                  icon={<UserPlus size={16} weight="bold" />}
-                >
-                  Inviter
-                </Button>
+
+              {errorMessage && (
+                <div className="p-3 border-2 border-orange-sifflet bg-orange-sifflet/10 text-orange-sifflet font-mono text-xs flex items-center gap-2">
+                  <Warning size={16} weight="bold" />
+                  {errorMessage}
+                </div>
+              )}
+
+              {/* Champ de recherche */}
+              <div className="relative">
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <MagnifyingGlass
+                      size={16}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-craie/40 pointer-events-none"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Tapez le prénom ou nom du joueur (ex: Amine Rachidi)..."
+                      value={searchName}
+                      onChange={(e) => setSearchName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && searchName.trim()) {
+                          e.preventDefault();
+                          const match = matchingPlayers[0];
+                          if (match) {
+                            setInvitingPlayerId(match.id);
+                            inviteMut.mutate({ userId: match.id, name: `${match.firstName} ${match.lastName}` });
+                          } else {
+                            inviteMut.mutate({ name: searchName.trim() });
+                          }
+                        }
+                      }}
+                      className="w-full bg-nuit-pelouse border-2 border-encre text-craie pl-9 pr-8 py-2 font-mono text-xs focus:border-vert-projecteur focus:outline-none"
+                    />
+                    {searchName && (
+                      <button
+                        onClick={() => setSearchName("")}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-craie/40 hover:text-craie"
+                      >
+                        <X size={14} />
+                      </button>
+                    )}
+                  </div>
+
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    disabled={!searchName.trim()}
+                    onClick={() => {
+                      const match = matchingPlayers[0];
+                      if (match) {
+                        setInvitingPlayerId(match.id);
+                        inviteMut.mutate({ userId: match.id, name: `${match.firstName} ${match.lastName}` });
+                      } else {
+                        inviteMut.mutate({ name: searchName.trim() });
+                      }
+                    }}
+                    loading={inviteMut.isPending && !invitingPlayerId}
+                    icon={<UserPlus size={16} weight="bold" />}
+                  >
+                    Inviter
+                  </Button>
+                </div>
+
+                {/* Suggestions / Résultats de recherche */}
+                {searchName.trim().length > 0 && (
+                  <div className="mt-3 border-2 border-encre bg-encre shadow-brutal max-h-64 overflow-y-auto divide-y divide-encre/60">
+                    {matchingPlayers.length === 0 ? (
+                      <div className="p-4 text-center font-mono text-xs text-craie/50">
+                        Aucun joueur trouvé pour &quot;{searchName}&quot;.
+                        <div className="mt-2">
+                          <button
+                            type="button"
+                            onClick={() => inviteMut.mutate({ name: searchName.trim() })}
+                            disabled={inviteMut.isPending}
+                            className="text-vert-projecteur underline hover:text-vert-projecteur/80 text-[11px] cursor-pointer"
+                          >
+                            Tenter d&apos;inviter directement par ce nom
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      matchingPlayers.map((p) => {
+                        const isAlreadyMember = memberUserIds.has(p.id);
+                        const isCurrentCaptain = p.id === user?.id;
+                        const isInvitingThis = invitingPlayerId === p.id && inviteMut.isPending;
+
+                        return (
+                          <div
+                            key={p.id}
+                            className="p-3 flex items-center justify-between gap-3 hover:bg-nuit-pelouse/60 transition-colors"
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 border border-encre bg-nuit-pelouse flex items-center justify-center font-mono font-bold text-xs text-vert-projecteur">
+                                {(p.firstName?.[0] ?? "").toUpperCase()}
+                                {(p.lastName?.[0] ?? "").toUpperCase()}
+                              </div>
+                              <div>
+                                <div className="text-craie font-bold text-xs font-mono">
+                                  {p.firstName} {p.lastName}
+                                </div>
+                                <div className="text-[11px] font-mono text-craie/50">
+                                  {p.preferredPosition ?? "Polyvalent"} • {p.city ?? "Ville non renseignée"}
+                                </div>
+                              </div>
+                            </div>
+
+                            <div>
+                              {isCurrentCaptain ? (
+                                <span className="font-mono text-[10px] text-jaune-carton border border-jaune-carton/40 px-2 py-0.5">
+                                  Capitaine (Vous)
+                                </span>
+                              ) : isAlreadyMember ? (
+                                <span className="font-mono text-[10px] text-craie/40 border border-encre px-2 py-0.5">
+                                  Déjà membre
+                                </span>
+                              ) : (
+                                <Button
+                                  variant="primary"
+                                  size="sm"
+                                  loading={isInvitingThis}
+                                  disabled={inviteMut.isPending}
+                                  onClick={() => {
+                                    setInvitingPlayerId(p.id);
+                                    inviteMut.mutate({
+                                      userId: p.id,
+                                      name: `${p.firstName} ${p.lastName}`,
+                                    });
+                                  }}
+                                  icon={<UserPlus size={14} weight="bold" />}
+                                  className="text-[11px] py-1 px-3"
+                                >
+                                  Inviter
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           )}
