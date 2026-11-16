@@ -49,10 +49,18 @@ public class PlayerService {
     }
 
     public List<Player> searchPlayers(String city) {
-        return playerRepository.search(city, false);
+        return searchPlayers(city, null);
+    }
+
+    public List<Player> searchPlayers(String city, String query) {
+        return playerRepository.search(city, query, false);
     }
 
     public List<Player> searchAvailablePlayers(String city) {
-        return playerRepository.search(city, true);
+        return searchAvailablePlayers(city, null);
+    }
+
+    public List<Player> searchAvailablePlayers(String city, String query) {
+        return playerRepository.search(city, query, true);
     }
 }

@@ -52,10 +52,14 @@ export async function acceptInvitation(invitationId: string): Promise<void> {
   return api<void>(`/teams/invitations/${invitationId}/accept`, { method: "POST", auth: true });
 }
 
-export async function invitePlayerToTeam(teamId: string, invitedUserId: string): Promise<TeamInvitation> {
+export async function invitePlayerToTeam(
+  teamId: string,
+  options: { invitedUserId?: string; playerName?: string; playerEmail?: string } | string
+): Promise<TeamInvitation> {
+  const body = typeof options === "string" ? { invitedUserId: options } : options;
   return api<TeamInvitation>(`/teams/${teamId}/invitations`, {
     method: "POST",
-    body: { invitedUserId },
+    body,
     auth: true,
   });
 }

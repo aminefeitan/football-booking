@@ -27,6 +27,9 @@ public class TeamService {
     @Inject
     private UserRepository userRepository;
 
+    @Inject
+    private com.sports.footballbooking.repository.PlayerRepository playerRepository;
+
     // ==================== DTOs compacts ====================
 
     public record CreateTeamRequest(
@@ -107,6 +110,27 @@ public class TeamService {
     }
 
     // ==================== Invitations ====================
+
+    public TeamInvitation invitePlayerByNameOrId(UUID teamId, UUID inviterId, UUID invitedUserId, String playerName, String playerEmail) {
+        UUID targetId = invitedUserId;
+        if (targetId == null && playerEmail != null && !playerEmail.isBlank()) {
+            User u = userRepository.findByEmail(playerEmail.trim().toLowerCase())
+                    .orElseThrow(() -> new BusinessException("Aucun utilisateur trouvé avec l'email : " + playerEmail));
+            targetId = u.getId();
+        } else if (targetId == null && playerName != null && !playerName.isBlank()) {
+            List<com.sports.footballbooking.entity.Player> matches = playerRepository.search(null, playerName.trim(), false);
+            if (matches.isEmpty()) {
+                throw new BusinessException("Aucun joueur trouvé avec le nom : " + playerName);
+            }
+            targetId = matches.get(0).getId();
+        }
+
+        if (targetId == null) {
+            throw new BusinessException("Veuillez renseigner un joueur valide à inviter");
+        }
+
+        return invitePlayer(teamId, inviterId, targetId);
+    }
 
     public TeamInvitation invitePlayer(UUID teamId, UUID inviterId, UUID invitedUserId) {
         Team team = teamRepository.getById(teamId);

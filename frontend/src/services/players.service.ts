@@ -26,10 +26,13 @@ export async function updateMyProfile(data: UpdateProfileRequest): Promise<Playe
   });
 }
 
-export async function searchPlayers(city?: string): Promise<Player[]> {
+export async function searchPlayers(query?: string, city?: string): Promise<Player[]> {
   try {
-    const params = city ? `?city=${encodeURIComponent(city)}` : "";
-    return await api<Player[]>(`/players${params}`);
+    const sp = new URLSearchParams();
+    if (query) sp.append("query", query);
+    if (city) sp.append("city", city);
+    const qStr = sp.toString() ? `?${sp.toString()}` : "";
+    return await api<Player[]>(`/players${qStr}`);
   } catch {
     return [MOCK_USER as Player];
   }

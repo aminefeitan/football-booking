@@ -26,7 +26,11 @@ public class TeamResource {
     @Inject
     private TeamService teamService;
 
-    public record InviteRequest(UUID invitedUserId) {}
+    public record InviteRequest(UUID invitedUserId, String playerName, String playerEmail) {
+        public InviteRequest(UUID invitedUserId) {
+            this(invitedUserId, null, null);
+        }
+    }
 
     @GET
     public Response listTeams(@QueryParam("city") String city) {
@@ -84,7 +88,13 @@ public class TeamResource {
                                  @Context SecurityContext sec,
                                  InviteRequest request) {
         UUID userId = SecurityUtils.getUserId(sec);
-        TeamInvitation inv = teamService.invitePlayer(teamId, userId, request.invitedUserId());
+        TeamInvitation inv = teamService.invitePlayerByNameOrId(
+                teamId,
+                userId,
+                request.invitedUserId(),
+                request.playerName(),
+                request.playerEmail()
+        );
         return Response.status(Response.Status.CREATED).entity(inv).build();
     }
 

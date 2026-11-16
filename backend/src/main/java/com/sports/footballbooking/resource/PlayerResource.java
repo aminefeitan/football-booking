@@ -23,15 +23,17 @@ public class PlayerResource {
     private PlayerService playerService;
 
     @GET
-    public Response searchPlayers(@QueryParam("city") String city) {
-        List<Player> players = playerService.searchPlayers(city);
+    public Response searchPlayers(@QueryParam("city") String city,
+                                  @QueryParam("query") String query) {
+        List<Player> players = playerService.searchPlayers(city, query);
         return Response.ok(players).build();
     }
 
     @GET
     @Path("/available")
-    public Response searchAvailablePlayers(@QueryParam("city") String city) {
-        List<Player> players = playerService.searchAvailablePlayers(city);
+    public Response searchAvailablePlayers(@QueryParam("city") String city,
+                                           @QueryParam("query") String query) {
+        List<Player> players = playerService.searchAvailablePlayers(city, query);
         return Response.ok(players).build();
     }
 
