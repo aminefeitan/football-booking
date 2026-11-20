@@ -1,26 +1,34 @@
 package com.sports.footballbooking.service;
 
+import com.sports.footballbooking.dto.FieldRequest;
+import com.sports.footballbooking.dto.FieldResponse;
+import com.sports.footballbooking.dto.SlotResponse;
+import com.sports.footballbooking.entity.Booking;
 import com.sports.footballbooking.entity.Field;
 import com.sports.footballbooking.entity.User;
+import com.sports.footballbooking.repository.BookingRepository;
 import com.sports.footballbooking.repository.FieldRepository;
 import com.sports.footballbooking.repository.UserRepository;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Positive;
+import jakarta.ws.rs.BadRequestException;
+import jakarta.ws.rs.ForbiddenException;
+import jakarta.ws.rs.NotFoundException;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import java.util.logging.Logger;
 
 @ApplicationScoped
-@Transactional
 public class FieldService {
 
-    private static final Logger LOG = Logger.getLogger(FieldService.class.getName());
+    public static final ZoneId ZONE = ZoneId.of("Africa/Casablanca");
 
     @Inject
     private FieldRepository fieldRepository;
@@ -28,103 +36,151 @@ public class FieldService {
     @Inject
     private UserRepository userRepository;
 
-    // ==================== DTO compact ====================
+    @Inject
+    private BookingRepository bookingRepository;
 
-    public record FieldRequest(
-            @NotBlank String name,
-            String description,
-            String address,
-            String city,
-            String postalCode,
-            BigDecimal latitude,
-            BigDecimal longitude,
-            String phone,
-            String fieldType,
-            String surfaceType,
-            Integer capacity,
-            @NotNull @Positive BigDecimal pricePerHour,
-            String currency,
-            boolean indoor,
-            boolean hasLights,
-            boolean hasLockerRoom,
-            boolean hasParking,
-            String openTime,
-            String closeTime
-    ) {}
-
-    // ==================== Méthodes ====================
-
-    public List<Field> getAllActiveFields() {
-        return fieldRepository.findAllActive();
+    public List<FieldResponse> searchApprovedFields(String city, String fieldType, BigDecimal maxPrice,
+                                                    Boolean indoor, Boolean hasLights) {
+        return fieldRepository.search(city, fieldType, maxPrice, indoor, hasLights).stream()
+                .map(FieldResponse::from)
+                .toList();
     }
 
-    public List<Field> getAllFields() {
-        return fieldRepository.findAll();
-    }
+    public FieldResponse getFieldDetails(UUID fieldId, UUID currentUserId, boolean isAdmin) {
+        Field field = fieldRepository.findById(fieldId)
+                .orElseThrow(() -> new NotFoundException("Terrain introuvable"));
 
-    public Field setFieldActive(UUID fieldId, boolean active) {
-        Field field = getFieldById(fieldId);
-        field.setActive(active);
-        fieldRepository.save(field);
-        LOG.info("Terrain " + (active ? "activé" : "désactivé") + ": " + field.getName());
-        return field;
-    }
-
-    public Field getFieldById(UUID id) {
-        return fieldRepository.getById(id);
-    }
-
-    public List<Field> searchFields(String city, String fieldType, Double maxPrice, Boolean indoor, Boolean hasLights) {
-        return fieldRepository.searchFields(city, fieldType, maxPrice, indoor, hasLights);
-    }
-
-    public Field createField(FieldRequest req, UUID ownerId) {
-        String type = req.fieldType() != null ? req.fieldType() : "5v5";
-        Field field = new Field(req.name(), req.city(), type, req.pricePerHour());
-        applyRequest(field, req);
-
-        if (ownerId != null) {
-            userRepository.findById(ownerId).ifPresent(field::setOwner);
+        // Only APPROVED fields are visible to general public/players
+        if (field.getStatus() != Field.FieldStatus.APPROVED) {
+            boolean isOwner = currentUserId != null && field.getOwner().getId().equals(currentUserId);
+            if (!isOwner && !isAdmin) {
+                throw new NotFoundException("Terrain introuvable ou non approuvé");
+            }
         }
 
-        LOG.info("Création du terrain: " + field.getName());
-        return fieldRepository.save(field);
+        return FieldResponse.from(field);
     }
 
-    public Field updateField(UUID fieldId, FieldRequest req) {
-        Field field = getFieldById(fieldId);
-        applyRequest(field, req);
-        LOG.info("Mise à jour du terrain: " + field.getName());
-        return fieldRepository.save(field);
+    public List<FieldResponse> findByOwner(UUID ownerId) {
+        return fieldRepository.findByOwner(ownerId).stream()
+                .map(FieldResponse::from)
+                .toList();
     }
 
-    public void deactivateField(UUID fieldId) {
-        Field field = getFieldById(fieldId);
-        field.setActive(false);
-        fieldRepository.save(field);
-        LOG.info("Terrain désactivé: " + field.getName());
+    public List<FieldResponse> findForAdmin(Field.FieldStatus status) {
+        Field.FieldStatus targetStatus = status != null ? status : Field.FieldStatus.PENDING;
+        return fieldRepository.findByStatus(targetStatus).stream()
+                .map(FieldResponse::from)
+                .toList();
     }
 
-    // ==================== Helper ====================
+    @Transactional
+    public FieldResponse createField(UUID ownerId, FieldRequest req) {
+        if (!req.openTime().isBefore(req.closeTime())) {
+            throw new BadRequestException("L'heure d'ouverture doit précéder l'heure de fermeture");
+        }
 
-    private void applyRequest(Field field, FieldRequest req) {
-        field.setDescription(req.description());
-        field.setAddress(req.address());
-        field.setCity(req.city());
-        field.setPostalCode(req.postalCode());
+        User owner = userRepository.findById(ownerId)
+                .orElseThrow(() -> new NotFoundException("Gérant introuvable"));
+
+        Field field = new Field();
+        field.setOwner(owner);
+        applyData(field, req);
+        field.setStatus(Field.FieldStatus.PENDING); // New field is always PENDING
+
+        fieldRepository.persist(field);
+        return FieldResponse.from(field);
+    }
+
+    @Transactional
+    public FieldResponse updateField(UUID fieldId, UUID callerId, boolean isAdmin, FieldRequest req) {
+        if (!req.openTime().isBefore(req.closeTime())) {
+            throw new BadRequestException("L'heure d'ouverture doit précéder l'heure de fermeture");
+        }
+
+        Field field = fieldRepository.findById(fieldId)
+                .orElseThrow(() -> new NotFoundException("Terrain introuvable"));
+
+        boolean isOwner = field.getOwner().getId().equals(callerId);
+        if (!isOwner && !isAdmin) {
+            throw new ForbiddenException("Vous n'êtes pas propriétaire de ce terrain");
+        }
+
+        applyData(field, req);
+        // Note: modification by owner does not change status
+
+        return FieldResponse.from(field);
+    }
+
+    @Transactional
+    public FieldResponse reviewFieldStatus(UUID fieldId, UUID adminId, Field.FieldStatus newStatus) {
+        Field field = fieldRepository.findById(fieldId)
+                .orElseThrow(() -> new NotFoundException("Terrain introuvable"));
+
+        User admin = userRepository.findById(adminId)
+                .orElseThrow(() -> new NotFoundException("Administrateur introuvable"));
+
+        field.setStatus(newStatus);
+        field.setReviewedBy(admin);
+
+        return FieldResponse.from(field);
+    }
+
+    public List<SlotResponse> getFieldSlots(UUID fieldId, LocalDate date, UUID currentUserId, boolean isAdmin) {
+        Field field = fieldRepository.findById(fieldId)
+                .orElseThrow(() -> new NotFoundException("Terrain introuvable"));
+
+        if (field.getStatus() != Field.FieldStatus.APPROVED) {
+            boolean isOwner = currentUserId != null && field.getOwner().getId().equals(currentUserId);
+            if (!isOwner && !isAdmin) {
+                throw new NotFoundException("Terrain introuvable ou non approuvé");
+            }
+        }
+
+        LocalDate targetDate = date != null ? date : LocalDate.now(ZONE);
+        OffsetDateTime dayStart = targetDate.atStartOfDay(ZONE).toOffsetDateTime();
+        OffsetDateTime dayEnd = targetDate.plusDays(1).atStartOfDay(ZONE).toOffsetDateTime();
+
+        List<Booking> activeBookings = bookingRepository.findActiveBetween(fieldId, dayStart, dayEnd);
+
+        List<SlotResponse> slots = new ArrayList<>();
+        LocalTime current = field.getOpenTime();
+        LocalTime close = field.getCloseTime();
+
+        while (current.plusHours(1).compareTo(close) <= 0 && !current.plusHours(1).equals(current)) {
+            LocalTime next = current.plusHours(1);
+            OffsetDateTime slotStart = targetDate.atTime(current).atZone(ZONE).toOffsetDateTime();
+            OffsetDateTime slotEnd = targetDate.atTime(next).atZone(ZONE).toOffsetDateTime();
+
+            boolean occupied = activeBookings.stream().anyMatch(b ->
+                    b.getStartAt().isBefore(slotEnd) && b.getEndAt().isAfter(slotStart));
+
+            String timeLabel = String.format("%02d:00", current.getHour());
+            slots.add(new SlotResponse(timeLabel, occupied ? "reserved" : "available", !occupied));
+
+            current = next;
+        }
+
+        return slots;
+    }
+
+    private void applyData(Field field, FieldRequest req) {
+        field.setName(req.name().trim());
+        field.setAddress(req.address().trim());
+        field.setCity(req.city().trim());
+        field.setDescription(req.description() != null ? req.description().trim() : null);
         field.setLatitude(req.latitude());
         field.setLongitude(req.longitude());
-        field.setPhone(req.phone());
-        if (req.fieldType() != null) field.setFieldType(req.fieldType());
-        field.setSurfaceType(req.surfaceType());
+        field.setPhone(req.phone() != null ? req.phone().trim() : null);
+        field.setFieldType(req.fieldType());
+        field.setSurfaceType(req.surfaceType() != null ? req.surfaceType().trim() : null);
         field.setCapacity(req.capacity());
         field.setPricePerHour(req.pricePerHour());
         field.setIndoor(req.indoor());
         field.setHasLights(req.hasLights());
         field.setHasLockerRoom(req.hasLockerRoom());
         field.setHasParking(req.hasParking());
-        if (req.openTime() != null && !req.openTime().isBlank()) field.setOpenTime(req.openTime());
-        if (req.closeTime() != null && !req.closeTime().isBlank()) field.setCloseTime(req.closeTime());
-        if (req.currency() != null && !req.currency().isBlank()) field.setCurrency(req.currency());
+        field.setOpenTime(req.openTime());
+        field.setCloseTime(req.closeTime());
     }
 }

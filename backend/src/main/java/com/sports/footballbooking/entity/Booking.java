@@ -1,143 +1,181 @@
 package com.sports.footballbooking.entity;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Positive;
-
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
-import java.util.UUID;
 
-/**
- * Represents a booking (reservation) of a field by a user.
- * Lifecycle status enum is embedded directly in this model.
- */
 @Entity
 @Table(name = "bookings")
-@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Booking extends BaseEntity {
 
-    public enum Status {
-        PENDING_PAYMENT,
+    public enum BookingStatus {
+        PENDING,
         CONFIRMED,
-        CANCELLED,
-        COMPLETED,
-        EXPIRED
+        REJECTED,
+        CANCELLED
     }
 
-    @ManyToOne(fetch = FetchType.EAGER)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "match_id", nullable = false)
+    private Match match;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "user_id", nullable = false)
-    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "passwordHash"})
     private User user;
 
-    @ManyToOne(fetch = FetchType.EAGER)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "field_id", nullable = false)
-    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Field field;
 
-    @NotNull
     @Column(name = "start_at", nullable = false)
     private OffsetDateTime startAt;
 
-    @NotNull
     @Column(name = "end_at", nullable = false)
     private OffsetDateTime endAt;
 
-    @NotNull
-    @Positive
-    @Column(name = "total_amount", nullable = false, precision = 12, scale = 2)
+    @Column(name = "total_amount", nullable = false, precision = 10, scale = 2)
     private BigDecimal totalAmount;
 
     @Column(nullable = false, length = 3)
     private String currency = "MAD";
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private Status status = Status.PENDING_PAYMENT;
-
-    @Column(columnDefinition = "TEXT")
+    @Column(length = 1000)
     private String notes;
 
-    @Column(name = "expires_at")
-    private OffsetDateTime expiresAt;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private BookingStatus status = BookingStatus.PENDING;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "handled_by_id")
+    private User handledBy;
+
+    @Column(name = "handled_at")
+    private OffsetDateTime handledAt;
 
     @Column(name = "cancelled_at")
     private OffsetDateTime cancelledAt;
 
-    @Column(name = "cancellation_reason", columnDefinition = "TEXT")
-    private String cancellationReason;
+    @Column(length = 500)
+    private String reason;
 
-    protected Booking() {
-        // Required by JPA
+    public Booking() {
     }
 
-    public Booking(User user, Field field, OffsetDateTime startAt, OffsetDateTime endAt,
-                   BigDecimal totalAmount) {
+    public Booking(Match match, User user, Field field, OffsetDateTime startAt, OffsetDateTime endAt,
+                   BigDecimal totalAmount, String notes) {
+        this.match = match;
         this.user = user;
         this.field = field;
         this.startAt = startAt;
         this.endAt = endAt;
         this.totalAmount = totalAmount;
-        this.currency = field.getCurrency();
-        this.status = Status.PENDING_PAYMENT;
+        this.currency = field != null ? field.getCurrency() : "MAD";
+        this.notes = notes;
+        this.status = BookingStatus.PENDING;
     }
 
-    @Override
-    @PrePersist
-    protected void onCreate() {
-        super.onCreate();
-        if (this.expiresAt == null && this.status == Status.PENDING_PAYMENT) {
-            this.expiresAt = getCreatedAt().plusMinutes(15);
-        }
+    public Match getMatch() {
+        return match;
     }
 
-    public void confirm() {
-        if (this.status != Status.PENDING_PAYMENT) {
-            throw new IllegalStateException("Only PENDING_PAYMENT bookings can be confirmed");
-        }
-        this.status = Status.CONFIRMED;
-        this.expiresAt = null;
+    public void setMatch(Match match) {
+        this.match = match;
     }
 
-    public void cancel(String reason) {
-        if (this.status == Status.CANCELLED || this.status == Status.COMPLETED) {
-            throw new IllegalStateException("Cannot cancel a " + this.status + " booking");
-        }
-        this.status = Status.CANCELLED;
-        this.cancelledAt = OffsetDateTime.now();
-        this.cancellationReason = reason;
+    public User getUser() {
+        return user;
     }
 
-    public void expire() {
-        if (this.status != Status.PENDING_PAYMENT) {
-            throw new IllegalStateException("Only PENDING_PAYMENT bookings can expire");
-        }
-        this.status = Status.EXPIRED;
+    public void setUser(User user) {
+        this.user = user;
     }
 
-    public void complete() {
-        if (this.status != Status.CONFIRMED) {
-            throw new IllegalStateException("Only CONFIRMED bookings can be completed");
-        }
-        this.status = Status.COMPLETED;
+    public Field getField() {
+        return field;
     }
 
-    // ==================== Getters ====================
+    public void setField(Field field) {
+        this.field = field;
+    }
 
-    public User getUser() { return user; }
-    public Field getField() { return field; }
-    public OffsetDateTime getStartAt() { return startAt; }
-    public OffsetDateTime getEndAt() { return endAt; }
-    public BigDecimal getTotalAmount() { return totalAmount; }
-    public String getCurrency() { return currency; }
-    public Status getStatus() { return status; }
-    public String getNotes() { return notes; }
-    public OffsetDateTime getExpiresAt() { return expiresAt; }
-    public OffsetDateTime getCancelledAt() { return cancelledAt; }
-    public String getCancellationReason() { return cancellationReason; }
+    public OffsetDateTime getStartAt() {
+        return startAt;
+    }
 
-    // ==================== Setters ====================
+    public void setStartAt(OffsetDateTime startAt) {
+        this.startAt = startAt;
+    }
 
-    public void setNotes(String notes) { this.notes = notes; }
+    public OffsetDateTime getEndAt() {
+        return endAt;
+    }
+
+    public void setEndAt(OffsetDateTime endAt) {
+        this.endAt = endAt;
+    }
+
+    public BigDecimal getTotalAmount() {
+        return totalAmount;
+    }
+
+    public void setTotalAmount(BigDecimal totalAmount) {
+        this.totalAmount = totalAmount;
+    }
+
+    public String getCurrency() {
+        return currency;
+    }
+
+    public void setCurrency(String currency) {
+        this.currency = currency;
+    }
+
+    public String getNotes() {
+        return notes;
+    }
+
+    public void setNotes(String notes) {
+        this.notes = notes;
+    }
+
+    public BookingStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(BookingStatus status) {
+        this.status = status;
+    }
+
+    public User getHandledBy() {
+        return handledBy;
+    }
+
+    public void setHandledBy(User handledBy) {
+        this.handledBy = handledBy;
+    }
+
+    public OffsetDateTime getHandledAt() {
+        return handledAt;
+    }
+
+    public void setHandledAt(OffsetDateTime handledAt) {
+        this.handledAt = handledAt;
+    }
+
+    public OffsetDateTime getCancelledAt() {
+        return cancelledAt;
+    }
+
+    public void setCancelledAt(OffsetDateTime cancelledAt) {
+        this.cancelledAt = cancelledAt;
+    }
+
+    public String getReason() {
+        return reason;
+    }
+
+    public void setReason(String reason) {
+        this.reason = reason;
+    }
 }

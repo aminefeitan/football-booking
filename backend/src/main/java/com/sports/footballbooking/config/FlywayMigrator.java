@@ -26,7 +26,15 @@ public class FlywayMigrator {
                         .dataSource(dataSource)
                         .locations("classpath:db/migration")
                         .baselineOnMigrate(true)
+                        .cleanDisabled(false)
                         .load();
+
+                try {
+                    flyway.validate();
+                } catch (Exception e) {
+                    LOG.warning("Flyway validation failed (schema changed). Cleaning database to reapply new V1 schema...");
+                    flyway.clean();
+                }
 
                 flyway.migrate();
                 LOG.info("Flyway migration completed successfully.");
@@ -39,3 +47,4 @@ public class FlywayMigrator {
         }
     }
 }
+

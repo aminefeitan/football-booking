@@ -1,9 +1,12 @@
 package com.sports.footballbooking.resource;
 
-import com.sports.footballbooking.config.Authenticated;
-import com.sports.footballbooking.config.SecurityUtils;
+import com.sports.footballbooking.dto.BookingResponse;
+import com.sports.footballbooking.dto.CreateBookingRequest;
+import com.sports.footballbooking.dto.RejectBookingRequest;
 import com.sports.footballbooking.entity.Booking;
 import com.sports.footballbooking.service.BookingService;
+import jakarta.annotation.security.RolesAllowed;
+import jakarta.enterprise.context.RequestScoped;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
@@ -12,11 +15,11 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.SecurityContext;
 
-import java.net.URI;
 import java.util.List;
 import java.util.UUID;
 
 @Path("/bookings")
+@RequestScoped
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class BookingResource {
@@ -24,50 +27,62 @@ public class BookingResource {
     @Inject
     private BookingService bookingService;
 
-    // DTO compact
-    public record CancelRequest(String reason) {}
-
     @POST
-    @Authenticated
-    public Response createBooking(
-            @Context SecurityContext sec,
-            @Valid BookingService.CreateBookingRequest request) {
-
-        UUID userId = SecurityUtils.getUserId(sec);
-        Booking booking = bookingService.createBooking(userId, request);
-        return Response.created(URI.create("/api/v1/bookings/" + booking.getId()))
-                .entity(booking).build();
+    @RolesAllowed("PLAYER")
+    public Response createBooking(@Context SecurityContext sec, @Valid CreateBookingRequest req) {
+        UUID callerId = UUID.fromString(sec.getUserPrincipal().getName());
+        BookingResponse res = bookingService.createBooking(callerId, req);
+        return Response.status(Response.Status.CREATED).entity(res).build();
     }
 
     @GET
     @Path("/me")
-    @Authenticated
-    public Response getMyBookings(@Context SecurityContext sec) {
-        UUID userId = SecurityUtils.getUserId(sec);
-        List<Booking> bookings = bookingService.getUserBookings(userId);
-        return Response.ok(bookings).build();
+    public List<BookingResponse> getMyBookings(@Context SecurityContext sec) {
+        UUID userId = UUID.fromString(sec.getUserPrincipal().getName());
+        return bookingService.getMyBookings(userId);
+    }
+
+    @GET
+    @Path("/manager")
+    @RolesAllowed("FIELD_MANAGER")
+    public List<BookingResponse> getManagerBookings(
+            @Context SecurityContext sec,
+            @QueryParam("status") Booking.BookingStatus status) {
+        UUID managerId = UUID.fromString(sec.getUserPrincipal().getName());
+        return bookingService.getManagerBookings(managerId, status);
     }
 
     @GET
     @Path("/{id}")
-    public Response getBooking(@PathParam("id") UUID id) {
-        return Response.ok(bookingService.getBookingById(id)).build();
+    public BookingResponse getBookingDetails(@PathParam("id") UUID id, @Context SecurityContext sec) {
+        UUID callerId = UUID.fromString(sec.getUserPrincipal().getName());
+        boolean isAdmin = sec.isUserInRole("ADMIN");
+        return bookingService.getBookingDetails(id, callerId, isAdmin);
+    }
+
+    @PATCH
+    @Path("/{id}/confirm")
+    @RolesAllowed({"FIELD_MANAGER", "ADMIN"})
+    public BookingResponse confirmBooking(@PathParam("id") UUID id, @Context SecurityContext sec) {
+        UUID callerId = UUID.fromString(sec.getUserPrincipal().getName());
+        boolean isAdmin = sec.isUserInRole("ADMIN");
+        return bookingService.confirmBooking(id, callerId, isAdmin);
+    }
+
+    @PATCH
+    @Path("/{id}/reject")
+    @RolesAllowed({"FIELD_MANAGER", "ADMIN"})
+    public BookingResponse rejectBooking(@PathParam("id") UUID id, @Context SecurityContext sec, @Valid RejectBookingRequest req) {
+        UUID callerId = UUID.fromString(sec.getUserPrincipal().getName());
+        boolean isAdmin = sec.isUserInRole("ADMIN");
+        return bookingService.rejectBooking(id, callerId, isAdmin, req);
     }
 
     @PATCH
     @Path("/{id}/cancel")
-    @Authenticated
-    public Response cancelBooking(
-            @PathParam("id") UUID id,
-            @Context SecurityContext sec,
-            CancelRequest cancelRequest) {
-
-        UUID userId = SecurityUtils.getUserId(sec);
-        String reason = (cancelRequest != null && cancelRequest.reason() != null)
-                ? cancelRequest.reason()
-                : "Annulation demandée par l'utilisateur";
-
-        Booking booking = bookingService.cancelBooking(id, userId, reason);
-        return Response.ok(booking).build();
+    public BookingResponse cancelBooking(@PathParam("id") UUID id, @Context SecurityContext sec) {
+        UUID callerId = UUID.fromString(sec.getUserPrincipal().getName());
+        boolean isAdmin = sec.isUserInRole("ADMIN");
+        return bookingService.cancelBooking(id, callerId, isAdmin);
     }
 }

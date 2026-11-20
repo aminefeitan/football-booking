@@ -1,11 +1,9 @@
 package com.sports.footballbooking.resource;
 
-import com.sports.footballbooking.config.Authenticated;
-import com.sports.footballbooking.config.SecurityUtils;
-import com.sports.footballbooking.entity.Team;
-import com.sports.footballbooking.entity.TeamInvitation;
-import com.sports.footballbooking.entity.TeamMember;
+import com.sports.footballbooking.dto.*;
 import com.sports.footballbooking.service.TeamService;
+import jakarta.annotation.security.RolesAllowed;
+import jakarta.enterprise.context.RequestScoped;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
@@ -14,11 +12,11 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.SecurityContext;
 
-import java.net.URI;
 import java.util.List;
 import java.util.UUID;
 
 @Path("/teams")
+@RequestScoped
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class TeamResource {
@@ -26,99 +24,48 @@ public class TeamResource {
     @Inject
     private TeamService teamService;
 
-    public record InviteRequest(UUID invitedUserId, String playerName, String playerEmail) {
-        public InviteRequest(UUID invitedUserId) {
-            this(invitedUserId, null, null);
-        }
+    @POST
+    @RolesAllowed("PLAYER")
+    public Response createTeam(@Context SecurityContext sec, @Valid CreateTeamRequest req) {
+        UUID creatorId = UUID.fromString(sec.getUserPrincipal().getName());
+        TeamResponse res = teamService.createTeam(creatorId, req);
+        return Response.status(Response.Status.CREATED).entity(res).build();
     }
 
     @GET
-    public Response listTeams(@QueryParam("city") String city) {
-        List<Team> teams = teamService.listTeams(city);
-        return Response.ok(teams).build();
+    @Path("/me")
+    public List<TeamResponse> getMyTeams(@Context SecurityContext sec) {
+        UUID userId = UUID.fromString(sec.getUserPrincipal().getName());
+        return teamService.getMyTeams(userId);
     }
 
     @GET
     @Path("/{id}")
-    public Response getTeam(@PathParam("id") UUID id) {
-        return Response.ok(teamService.getTeamById(id)).build();
+    public TeamResponse getTeamDetails(@PathParam("id") UUID id, @Context SecurityContext sec) {
+        UUID userId = UUID.fromString(sec.getUserPrincipal().getName());
+        return teamService.getTeamDetails(id, userId);
+    }
+
+    @GET
+    public List<TeamSummaryResponse> searchTeams(@QueryParam("name") String name) {
+        return teamService.searchTeams(name);
     }
 
     @POST
-    @Authenticated
-    public Response createTeam(
-            @Context SecurityContext sec,
-            @Valid TeamService.CreateTeamRequest request) {
-        UUID userId = SecurityUtils.getUserId(sec);
-        Team team = teamService.createTeam(userId, request);
-        return Response.created(URI.create("/api/v1/teams/" + team.getId())).entity(team).build();
-    }
-
-    @POST
-    @Path("/{id}/members")
-    @Authenticated
-    public Response addMember(@PathParam("id") UUID teamId,
-                              @Valid TeamService.AddMemberRequest request) {
-        TeamMember member = teamService.addMember(teamId, request);
-        return Response.status(Response.Status.CREATED).entity(member).build();
+    @Path("/{id}/invitations")
+    @RolesAllowed("PLAYER")
+    public Response inviteMember(@PathParam("id") UUID teamId, @Context SecurityContext sec, @Valid InviteMemberRequest req) {
+        UUID captainId = UUID.fromString(sec.getUserPrincipal().getName());
+        TeamInvitationResponse res = teamService.inviteMember(teamId, captainId, req);
+        return Response.status(Response.Status.CREATED).entity(res).build();
     }
 
     @DELETE
     @Path("/{id}/members/{userId}")
-    @Authenticated
-    public Response removeMember(@PathParam("id") UUID teamId,
-                                 @PathParam("userId") UUID userId) {
-        teamService.removeMember(teamId, userId);
+    @RolesAllowed("PLAYER")
+    public Response removeMember(@PathParam("id") UUID teamId, @PathParam("userId") UUID targetUserId, @Context SecurityContext sec) {
+        UUID captainId = UUID.fromString(sec.getUserPrincipal().getName());
+        teamService.removeMember(teamId, captainId, targetUserId);
         return Response.noContent().build();
-    }
-
-    @GET
-    @Path("/user/{userId}")
-    public Response getUserTeams(@PathParam("userId") UUID userId) {
-        List<Team> teams = teamService.getUserTeams(userId);
-        return Response.ok(teams).build();
-    }
-
-    // ==================== Invitations ====================
-
-    @POST
-    @Path("/{id}/invitations")
-    @Authenticated
-    public Response invitePlayer(@PathParam("id") UUID teamId,
-                                 @Context SecurityContext sec,
-                                 InviteRequest request) {
-        UUID userId = SecurityUtils.getUserId(sec);
-        TeamInvitation inv = teamService.invitePlayerByNameOrId(
-                teamId,
-                userId,
-                request.invitedUserId(),
-                request.playerName(),
-                request.playerEmail()
-        );
-        return Response.status(Response.Status.CREATED).entity(inv).build();
-    }
-
-    @GET
-    @Path("/{id}/invitations")
-    public Response getTeamInvitations(@PathParam("id") UUID teamId) {
-        return Response.ok(teamService.getTeamInvitations(teamId)).build();
-    }
-
-    @GET
-    @Path("/invitations/pending")
-    @Authenticated
-    public Response getMyPendingInvitations(@Context SecurityContext sec) {
-        UUID userId = SecurityUtils.getUserId(sec);
-        return Response.ok(teamService.getPendingInvitations(userId)).build();
-    }
-
-    @POST
-    @Path("/invitations/{invitationId}/accept")
-    @Authenticated
-    public Response acceptInvitation(@PathParam("invitationId") UUID invitationId,
-                                     @Context SecurityContext sec) {
-        UUID userId = SecurityUtils.getUserId(sec);
-        teamService.acceptInvitation(invitationId, userId);
-        return Response.ok().build();
     }
 }

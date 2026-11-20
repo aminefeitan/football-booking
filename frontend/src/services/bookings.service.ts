@@ -1,31 +1,47 @@
 import { api } from "@/lib/api";
-import type { Booking } from "@/lib/types";
-import { MOCK_BOOKINGS } from "@/lib/mock-data";
+import type { Booking, BookingStatus } from "@/lib/types";
 
-export interface CreateBookingRequest {
+export interface CreateBookingData {
+  matchId: string;
   fieldId: string;
-  startAt: string;
-  endAt: string;
   notes?: string;
 }
 
-export async function getMyBookings(): Promise<Booking[]> {
-  try {
-    return await api<Booking[]>("/bookings/me", { auth: true });
-  } catch {
-    return MOCK_BOOKINGS;
-  }
-}
-
-export async function createBooking(data: CreateBookingRequest): Promise<Booking> {
-  return api<Booking>("/bookings", { method: "POST", body: data, auth: true });
-}
-
-export async function cancelBooking(id: string, reason?: string): Promise<Booking> {
-  return api<Booking>(`/bookings/${id}/cancel`, {
-    method: "PATCH",
-    body: reason ? { reason } : undefined,
-    auth: true,
+export async function createBooking(data: CreateBookingData): Promise<Booking> {
+  return api<Booking>("/bookings", {
+    method: "POST",
+    body: data,
   });
 }
 
+export async function getMyBookings(): Promise<Booking[]> {
+  return api<Booking[]>("/bookings/me");
+}
+
+export async function getBookingById(id: string): Promise<Booking> {
+  return api<Booking>(`/bookings/${id}`);
+}
+
+export async function getManagerBookings(status?: BookingStatus): Promise<Booking[]> {
+  const query = status ? `?status=${encodeURIComponent(status)}` : "";
+  return api<Booking[]>(`/bookings/manager${query}`);
+}
+
+export async function confirmBooking(id: string): Promise<Booking> {
+  return api<Booking>(`/bookings/${id}/confirm`, {
+    method: "PATCH",
+  });
+}
+
+export async function rejectBooking(id: string, reason: string): Promise<Booking> {
+  return api<Booking>(`/bookings/${id}/reject`, {
+    method: "PATCH",
+    body: { reason },
+  });
+}
+
+export async function cancelBooking(id: string): Promise<Booking> {
+  return api<Booking>(`/bookings/${id}/cancel`, {
+    method: "PATCH",
+  });
+}

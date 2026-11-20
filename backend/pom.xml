@@ -135,6 +135,21 @@
             <version>0.10.2</version>
         </dependency>
 
+        <!-- JWT Auth0 -->
+        <dependency>
+            <groupId>com.auth0</groupId>
+            <artifactId>java-jwt</artifactId>
+            <version>4.4.0</version>
+        </dependency>
+
+        <!-- MicroProfile Config (provided by WildFly) -->
+        <dependency>
+            <groupId>org.eclipse.microprofile.config</groupId>
+            <artifactId>microprofile-config-api</artifactId>
+            <version>3.1</version>
+            <scope>provided</scope>
+        </dependency>
+
         <!-- ==================== Test dependencies ==================== -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
@@ -154,7 +169,20 @@
             <version>5.11.0</version>
             <scope>test</scope>
         </dependency>
-    </dependencies>
+        <dependency>
+            <groupId>org.jboss.resteasy</groupId>
+            <artifactId>resteasy-core</artifactId>
+            <version>6.2.9.Final</version>
+            <scope>test</scope>
+        </dependency>
+        <!-- EJB API for @Singleton and @Startup -->
+    <dependency>
+        <groupId>jakarta.ejb</groupId>
+        <artifactId>jakarta.ejb-api</artifactId>
+        <version>4.0.1</version>
+        <scope>provided</scope>
+    </dependency>
+</dependencies>
 
     <build>
         <plugins>

@@ -1,196 +1,208 @@
 package com.sports.footballbooking.service;
 
+import com.sports.footballbooking.dto.*;
 import com.sports.footballbooking.entity.Team;
 import com.sports.footballbooking.entity.TeamInvitation;
 import com.sports.footballbooking.entity.TeamMember;
 import com.sports.footballbooking.entity.User;
-import com.sports.footballbooking.exception.BusinessException;
+import com.sports.footballbooking.repository.TeamInvitationRepository;
+import com.sports.footballbooking.repository.TeamMemberRepository;
 import com.sports.footballbooking.repository.TeamRepository;
 import com.sports.footballbooking.repository.UserRepository;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
+import jakarta.ws.rs.BadRequestException;
+import jakarta.ws.rs.ClientErrorException;
+import jakarta.ws.rs.ForbiddenException;
+import jakarta.ws.rs.NotFoundException;
+import jakarta.ws.rs.core.Response;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 @ApplicationScoped
-@Transactional
 public class TeamService {
+
+    public static final int MAX_MEMBERS = 15;
 
     @Inject
     private TeamRepository teamRepository;
 
     @Inject
-    private UserRepository userRepository;
+    private TeamMemberRepository teamMemberRepository;
 
     @Inject
-    private com.sports.footballbooking.repository.PlayerRepository playerRepository;
+    private TeamInvitationRepository teamInvitationRepository;
 
-    // ==================== DTOs compacts ====================
+    @Inject
+    private UserRepository userRepository;
 
-    public record CreateTeamRequest(
-            @NotBlank String name,
-            String description,
-            String city,
-            int maxMembers
-    ) {
-        public CreateTeamRequest(String name, String description, String city) {
-            this(name, description, city, 15);
-        }
-    }
+    @Transactional
+    public TeamResponse createTeam(UUID creatorId, CreateTeamRequest req) {
+        User creator = userRepository.findById(creatorId)
+                .orElseThrow(() -> new NotFoundException("Joueur introuvable"));
 
-    public record AddMemberRequest(
-            @NotNull UUID userId,
-            String role,
-            String position
-    ) {}
-
-    // ==================== Méthodes ====================
-
-    public Team createTeam(UUID creatorId, CreateTeamRequest request) {
-        User creator = userRepository.getById(creatorId);
-
-        int max = request.maxMembers() > 0 ? request.maxMembers() : 15;
-        Team team = new Team(creator, request.name(), request.city(), max);
-        team.setDescription(request.description());
-        team = teamRepository.save(team);
-        teamRepository.flush();
-
-        // Le créateur devient automatiquement capitaine
-        TeamMember captain = new TeamMember(team, creator, "CAPTAIN", "Captain");
-        teamRepository.persistMember(captain);
-
-        return getTeamById(team.getId());
-    }
-
-    public Team getTeamById(UUID teamId) {
-        Team team = teamRepository.getById(teamId);
-        team.setMembers(teamRepository.findMembers(teamId));
-        return team;
-    }
-
-    public List<Team> listTeams(String city) {
-        List<Team> teams = teamRepository.findActive(city);
-        teams.forEach(t -> t.setMembers(teamRepository.findMembers(t.getId())));
-        return teams;
-    }
-
-    public TeamMember addMember(UUID teamId, AddMemberRequest request) {
-        Team team = teamRepository.getById(teamId);
-        User user = userRepository.getById(request.userId());
-
-        if (teamRepository.isMember(teamId, user.getId())) {
-            throw new BusinessException("L'utilisateur est déjà membre de cette équipe");
+        if (creator.getRole() != User.Role.PLAYER) {
+            throw new ForbiddenException("Seuls les joueurs peuvent créer une équipe");
         }
 
-        List<TeamMember> currentMembers = teamRepository.findMembers(teamId);
-        if (currentMembers.size() >= team.getMaxMembers()) {
-            throw new BusinessException("L'équipe a atteint la capacité maximale de " + team.getMaxMembers());
-        }
+        Team team = new Team(req.name().trim(), req.description() != null ? req.description().trim() : null);
+        teamRepository.persist(team);
 
-        String role = request.role() != null ? request.role() : "MEMBER";
-        TeamMember member = new TeamMember(team, user, role, request.position());
-        teamRepository.persistMember(member);
-        return member;
+        TeamMember captain = new TeamMember(team, creator, TeamMember.TeamRole.CAPTAIN);
+        teamMemberRepository.persist(captain);
+
+        List<TeamMemberResponse> members = List.of(TeamMemberResponse.from(captain));
+        return TeamResponse.from(team, members);
     }
 
-    public void removeMember(UUID teamId, UUID userId) {
-        teamRepository.removeMember(teamId, userId);
-    }
-
-    public List<Team> getUserTeams(UUID userId) {
-        List<TeamMember> memberships = teamRepository.findUserMemberships(userId);
+    public List<TeamResponse> getMyTeams(UUID userId) {
+        List<TeamMember> memberships = teamMemberRepository.findByUser(userId);
         return memberships.stream()
-                .map(m -> getTeamById(m.getTeam().getId()))
+                .map(m -> {
+                    Team team = m.getTeam();
+                    List<TeamMemberResponse> members = teamMemberRepository.findByTeam(team.getId()).stream()
+                            .map(TeamMemberResponse::from)
+                            .toList();
+                    return TeamResponse.from(team, members);
+                })
                 .toList();
     }
 
-    // ==================== Invitations ====================
-
-    public TeamInvitation invitePlayerByNameOrId(UUID teamId, UUID inviterId, UUID invitedUserId, String playerName, String playerEmail) {
-        UUID targetId = invitedUserId;
-        if (targetId == null && playerEmail != null && !playerEmail.isBlank()) {
-            User u = userRepository.findByEmail(playerEmail.trim().toLowerCase())
-                    .orElseThrow(() -> new BusinessException("Aucun utilisateur trouvé avec l'email : " + playerEmail));
-            targetId = u.getId();
-        } else if (targetId == null && playerName != null && !playerName.isBlank()) {
-            List<com.sports.footballbooking.entity.Player> matches = playerRepository.search(null, playerName.trim(), false);
-            if (matches.isEmpty()) {
-                throw new BusinessException("Aucun joueur trouvé avec le nom : " + playerName);
-            }
-            targetId = matches.get(0).getId();
+    public TeamResponse getTeamDetails(UUID teamId, UUID userId) {
+        if (!teamMemberRepository.isMember(teamId, userId)) {
+            // Lecture interdite si non membre -> 404 comme stipulé
+            throw new NotFoundException("Équipe introuvable");
         }
 
-        if (targetId == null) {
-            throw new BusinessException("Veuillez renseigner un joueur valide à inviter");
-        }
+        Team team = teamRepository.findById(teamId)
+                .orElseThrow(() -> new NotFoundException("Équipe introuvable"));
 
-        return invitePlayer(teamId, inviterId, targetId);
+        List<TeamMemberResponse> members = teamMemberRepository.findByTeam(teamId).stream()
+                .map(TeamMemberResponse::from)
+                .toList();
+
+        return TeamResponse.from(team, members);
     }
 
-    public TeamInvitation invitePlayer(UUID teamId, UUID inviterId, UUID invitedUserId) {
-        Team team = teamRepository.getById(teamId);
-        User inviter = userRepository.getById(inviterId);
-        User invited = userRepository.getById(invitedUserId);
-
-        if (teamRepository.isMember(teamId, invitedUserId)) {
-            throw new BusinessException("Ce joueur est déjà membre de l'équipe");
-        }
-
-        Optional<TeamInvitation> existing = teamRepository.findInvitation(teamId, invitedUserId);
-        TeamInvitation invitation;
-        if (existing.isPresent()) {
-            invitation = existing.get();
-            if ("PENDING".equals(invitation.getStatus())) {
-                throw new BusinessException("Invitation déjà en attente pour ce joueur");
-            }
-            invitation.setStatus("PENDING");
-            invitation = teamRepository.mergeInvitation(invitation);
-        } else {
-            invitation = new TeamInvitation(team, invited, inviter);
-            teamRepository.persistInvitation(invitation);
-        }
-        return invitation;
+    public List<TeamSummaryResponse> searchTeams(String name) {
+        return teamRepository.searchByName(name).stream()
+                .map(t -> new TeamSummaryResponse(t.getId(), t.getName()))
+                .toList();
     }
 
+    @Transactional
+    public TeamInvitationResponse inviteMember(UUID teamId, UUID captainId, InviteMemberRequest req) {
+        if (!teamMemberRepository.isCaptain(teamId, captainId)) {
+            throw new ForbiddenException("Seul le capitaine de l'équipe peut inviter des membres");
+        }
+
+        Team team = teamRepository.findById(teamId)
+                .orElseThrow(() -> new NotFoundException("Équipe introuvable"));
+
+        long currentCount = teamMemberRepository.countMembers(teamId);
+        if (currentCount >= MAX_MEMBERS) {
+            throw new ClientErrorException("L'équipe a atteint la limite de " + MAX_MEMBERS + " membres", Response.Status.CONFLICT);
+        }
+
+        String email = req.email().trim().toLowerCase();
+        User invited = userRepository.findByEmail(email)
+                .orElseThrow(() -> new NotFoundException("Utilisateur introuvable"));
+
+        if (invited.getRole() != User.Role.PLAYER || invited.getStatus() != User.Status.ACTIVE) {
+            throw new NotFoundException("Utilisateur introuvable ou non éligible");
+        }
+
+        if (teamMemberRepository.isMember(teamId, invited.getId())) {
+            throw new ClientErrorException("Ce joueur est déjà membre de l'équipe", Response.Status.CONFLICT);
+        }
+
+        if (teamInvitationRepository.existsPending(teamId, invited.getId())) {
+            throw new ClientErrorException("Une invitation en attente existe déjà pour ce joueur", Response.Status.CONFLICT);
+        }
+
+        User captain = userRepository.findById(captainId)
+                .orElseThrow(() -> new NotFoundException("Capitaine introuvable"));
+
+        TeamInvitation invitation = new TeamInvitation(team, invited, captain);
+        teamInvitationRepository.persist(invitation);
+
+        return TeamInvitationResponse.from(invitation);
+    }
+
+    @Transactional
+    public void removeMember(UUID teamId, UUID captainId, UUID targetUserId) {
+        if (!teamMemberRepository.isCaptain(teamId, captainId)) {
+            throw new ForbiddenException("Seul le capitaine peut exclure un membre");
+        }
+
+        if (captainId.equals(targetUserId)) {
+            throw new BadRequestException("Le capitaine ne peut pas s'exclure lui-même");
+        }
+
+        TeamMember member = teamMemberRepository.findByTeamAndUser(teamId, targetUserId)
+                .orElseThrow(() -> new NotFoundException("Membre introuvable dans cette équipe"));
+
+        teamMemberRepository.remove(member);
+    }
+
+    public List<TeamInvitationResponse> getMyInvitations(UUID userId) {
+        return teamInvitationRepository.findByInvitedUser(userId).stream()
+                .filter(i -> i.getStatus() == TeamInvitation.InvitationStatus.PENDING)
+                .map(TeamInvitationResponse::from)
+                .toList();
+    }
+
+    @Transactional
     public void acceptInvitation(UUID invitationId, UUID userId) {
-        TeamInvitation invitation = teamRepository.findInvitationById(invitationId);
+        TeamInvitation invitation = teamInvitationRepository.findById(invitationId)
+                .orElseThrow(() -> new NotFoundException("Invitation introuvable"));
+
         if (!invitation.getInvitedUser().getId().equals(userId)) {
-            throw new BusinessException("Seul le joueur invité peut accepter cette invitation");
-        }
-        if (!"PENDING".equals(invitation.getStatus())) {
-            throw new BusinessException("L'invitation n'est plus en attente");
+            throw new ForbiddenException("Cette invitation ne vous est pas destinée");
         }
 
-        invitation.accept();
-        teamRepository.mergeInvitation(invitation);
-
-        Team team = invitation.getTeam();
-        List<TeamMember> currentMembers = teamRepository.findMembers(team.getId());
-        if (currentMembers.size() < team.getMaxMembers()) {
-            TeamMember member = new TeamMember(team, invitation.getInvitedUser(), "MEMBER", "Player");
-            teamRepository.persistMember(member);
+        if (invitation.getStatus() != TeamInvitation.InvitationStatus.PENDING) {
+            throw new ClientErrorException("Cette invitation n'est plus en attente", Response.Status.CONFLICT);
         }
+
+        // Lock team to ensure MAX_MEMBERS check is safe under concurrency
+        Team team = teamRepository.findByIdForUpdate(invitation.getTeam().getId())
+                .orElseThrow(() -> new NotFoundException("Équipe introuvable"));
+
+        long memberCount = teamMemberRepository.countMembers(team.getId());
+        if (memberCount >= MAX_MEMBERS) {
+            throw new ClientErrorException("L'équipe a atteint la limite de " + MAX_MEMBERS + " membres", Response.Status.CONFLICT);
+        }
+
+        if (teamMemberRepository.isMember(team.getId(), userId)) {
+            invitation.setStatus(TeamInvitation.InvitationStatus.ACCEPTED);
+            return;
+        }
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new NotFoundException("Utilisateur introuvable"));
+
+        TeamMember member = new TeamMember(team, user, TeamMember.TeamRole.MEMBER);
+        teamMemberRepository.persist(member);
+
+        invitation.setStatus(TeamInvitation.InvitationStatus.ACCEPTED);
     }
 
+    @Transactional
     public void declineInvitation(UUID invitationId, UUID userId) {
-        TeamInvitation invitation = teamRepository.findInvitationById(invitationId);
+        TeamInvitation invitation = teamInvitationRepository.findById(invitationId)
+                .orElseThrow(() -> new NotFoundException("Invitation introuvable"));
+
         if (!invitation.getInvitedUser().getId().equals(userId)) {
-            throw new BusinessException("Seul le joueur invité peut refuser cette invitation");
+            throw new ForbiddenException("Cette invitation ne vous est pas destinée");
         }
-        invitation.decline();
-        teamRepository.mergeInvitation(invitation);
-    }
 
-    public List<TeamInvitation> getPendingInvitations(UUID userId) {
-        return teamRepository.findPendingInvitations(userId);
-    }
+        if (invitation.getStatus() != TeamInvitation.InvitationStatus.PENDING) {
+            throw new ClientErrorException("Cette invitation n'est plus en attente", Response.Status.CONFLICT);
+        }
 
-    public List<TeamInvitation> getTeamInvitations(UUID teamId) {
-        return teamRepository.findTeamInvitations(teamId);
+        invitation.setStatus(TeamInvitation.InvitationStatus.DECLINED);
     }
 }

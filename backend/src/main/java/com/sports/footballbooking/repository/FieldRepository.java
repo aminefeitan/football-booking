@@ -2,65 +2,104 @@ package com.sports.footballbooking.repository;
 
 import com.sports.footballbooking.entity.Field;
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.persistence.criteria.CriteriaBuilder;
-import jakarta.persistence.criteria.CriteriaQuery;
-import jakarta.persistence.criteria.Predicate;
-import jakarta.persistence.criteria.Root;
-
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
+import jakarta.persistence.NoResultException;
+import jakarta.persistence.PersistenceContext;
+import jakarta.persistence.TypedQuery;
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 @ApplicationScoped
-public class FieldRepository extends BaseRepository<Field> {
+public class FieldRepository {
 
-    public FieldRepository() {
-        super(Field.class);
+    @PersistenceContext
+    private EntityManager em;
+
+    public Optional<Field> findById(UUID id) {
+        if (id == null) return Optional.empty();
+        try {
+            Field f = em.createQuery(
+                            "SELECT f FROM Field f " +
+                            "JOIN FETCH f.owner " +
+                            "LEFT JOIN FETCH f.reviewedBy " +
+                            "WHERE f.id = :id", Field.class)
+                    .setParameter("id", id)
+                    .getSingleResult();
+            return Optional.of(f);
+        } catch (NoResultException e) {
+            return Optional.empty();
+        }
     }
 
-    public List<Field> findAllActive() {
-        return findListBy("active", true);
+    public Optional<Field> findByIdForUpdate(UUID id) {
+        if (id == null) return Optional.empty();
+        return Optional.ofNullable(em.find(Field.class, id, LockModeType.PESSIMISTIC_WRITE));
     }
 
-    public List<Field> searchFields(String city, String fieldType, Double maxPrice, Boolean indoor, Boolean hasLights) {
-        CriteriaBuilder cb = cb();
-        CriteriaQuery<Field> cq = newQuery();
-        Root<Field> root = cq.from(Field.class);
-
-        List<Predicate> predicates = new ArrayList<>();
-        predicates.add(cb.isTrue(root.get("active")));
+    public List<Field> search(String city, String type, BigDecimal maxPrice, Boolean indoor, Boolean hasLights) {
+        StringBuilder jpql = new StringBuilder(
+                "SELECT f FROM Field f JOIN FETCH f.owner WHERE f.status = :approved");
+        Map<String, Object> params = new HashMap<>();
+        params.put("approved", Field.FieldStatus.APPROVED);
 
         if (city != null && !city.isBlank()) {
-            predicates.add(cb.equal(cb.lower(root.get("city")), city.trim().toLowerCase()));
+            jpql.append(" AND lower(f.city) = lower(:city)");
+            params.put("city", city.trim());
         }
-        if (fieldType != null && !fieldType.isBlank()) {
-            predicates.add(cb.equal(root.get("fieldType"), fieldType.trim()));
+        if (type != null && !type.isBlank()) {
+            jpql.append(" AND f.fieldType = :type");
+            params.put("type", type.trim());
         }
         if (maxPrice != null) {
-            predicates.add(cb.lessThanOrEqualTo(root.get("pricePerHour"), BigDecimal.valueOf(maxPrice)));
+            jpql.append(" AND f.pricePerHour <= :maxPrice");
+            params.put("maxPrice", maxPrice);
         }
         if (indoor != null) {
-            predicates.add(cb.equal(root.get("indoor"), indoor));
+            jpql.append(" AND f.indoor = :indoor");
+            params.put("indoor", indoor);
         }
         if (hasLights != null) {
-            predicates.add(cb.equal(root.get("hasLights"), hasLights));
+            jpql.append(" AND f.hasLights = :hasLights");
+            params.put("hasLights", hasLights);
         }
 
-        cq.where(predicates.toArray(new Predicate[0]))
-          .orderBy(cb.asc(root.get("name")));
+        jpql.append(" ORDER BY f.createdAt DESC");
 
-        return em.createQuery(cq).getResultList();
+        TypedQuery<Field> query = em.createQuery(jpql.toString(), Field.class);
+        params.forEach(query::setParameter);
+        return query.getResultList();
     }
 
     public List<Field> findByOwner(UUID ownerId) {
-        CriteriaBuilder cb = cb();
-        CriteriaQuery<Field> cq = newQuery();
-        Root<Field> root = cq.from(Field.class);
-        // Retourne TOUS les terrains du gérant (actifs et inactifs)
-        cq.where(cb.equal(root.get("owner").get("id"), ownerId))
-          .orderBy(cb.desc(root.get("createdAt")));
-        return em.createQuery(cq).getResultList();
+        return em.createQuery(
+                        "SELECT f FROM Field f JOIN FETCH f.owner " +
+                        "WHERE f.owner.id = :ownerId ORDER BY f.createdAt DESC", Field.class)
+                .setParameter("ownerId", ownerId)
+                .getResultList();
+    }
+
+    public List<Field> findByStatus(Field.FieldStatus status) {
+        return em.createQuery(
+                        "SELECT f FROM Field f JOIN FETCH f.owner " +
+                        "LEFT JOIN FETCH f.reviewedBy " +
+                        "WHERE f.status = :status ORDER BY f.createdAt DESC", Field.class)
+                .setParameter("status", status)
+                .getResultList();
+    }
+
+    public void persist(Field field) {
+        em.persist(field);
+    }
+
+    public Map<String, Long> countByStatus() {
+        List<Object[]> rows = em.createQuery(
+                "SELECT f.status, COUNT(f) FROM Field f GROUP BY f.status", Object[].class)
+                .getResultList();
+        Map<String, Long> result = new HashMap<>();
+        for (Object[] r : rows) {
+            result.put(r[0].toString(), (Long) r[1]);
+        }
+        return result;
     }
 }
-

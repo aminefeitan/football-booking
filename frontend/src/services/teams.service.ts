@@ -1,65 +1,56 @@
 import { api } from "@/lib/api";
-import type { Team, TeamInvitation, TeamMember } from "@/lib/types";
-import { MOCK_TEAMS } from "@/lib/mock-data";
+import type { Team, TeamSummary, TeamInvitation } from "@/lib/types";
 
-export interface CreateTeamRequest {
+export interface CreateTeamData {
   name: string;
   description?: string;
-  city?: string;
-  maxMembers: number;
 }
 
-export async function getTeams(city?: string): Promise<Team[]> {
-  try {
-    const params = city ? `?city=${encodeURIComponent(city)}` : "";
-    return await api<Team[]>(`/teams${params}`);
-  } catch {
-    return MOCK_TEAMS;
-  }
+export async function createTeam(data: CreateTeamData): Promise<Team> {
+  return api<Team>("/teams", {
+    method: "POST",
+    body: data,
+  });
+}
+
+export async function getMyTeams(): Promise<Team[]> {
+  return api<Team[]>("/teams/me");
 }
 
 export async function getTeamById(id: string): Promise<Team> {
-  try {
-    return await api<Team>(`/teams/${id}`);
-  } catch {
-    const team = MOCK_TEAMS.find((t) => t.id === id);
-    if (!team) throw new Error("Équipe introuvable");
-    return team;
-  }
+  return api<Team>(`/teams/${id}`);
 }
 
-export async function createTeam(data: CreateTeamRequest): Promise<Team> {
-  return api<Team>("/teams", { method: "POST", body: data, auth: true });
+export async function searchTeams(name?: string): Promise<TeamSummary[]> {
+  const query = name ? `?name=${encodeURIComponent(name)}` : "";
+  return api<TeamSummary[]>(`/teams${query}`);
 }
 
-export async function addTeamMember(teamId: string, data: { userId: string; role?: string; position?: string }): Promise<TeamMember> {
-  return api<TeamMember>(`/teams/${teamId}/members`, { method: "POST", body: data, auth: true });
-}
-
-export async function removeTeamMember(teamId: string, userId: string): Promise<void> {
-  return api<void>(`/teams/${teamId}/members/${userId}`, { method: "DELETE", auth: true });
-}
-
-export async function getPendingInvitations(): Promise<TeamInvitation[]> {
-  try {
-    return await api<TeamInvitation[]>("/teams/invitations/pending", { auth: true });
-  } catch {
-    return [];
-  }
-}
-
-export async function acceptInvitation(invitationId: string): Promise<void> {
-  return api<void>(`/teams/invitations/${invitationId}/accept`, { method: "POST", auth: true });
-}
-
-export async function invitePlayerToTeam(
-  teamId: string,
-  options: { invitedUserId?: string; playerName?: string; playerEmail?: string } | string
-): Promise<TeamInvitation> {
-  const body = typeof options === "string" ? { invitedUserId: options } : options;
+export async function inviteMember(teamId: string, email: string): Promise<TeamInvitation> {
   return api<TeamInvitation>(`/teams/${teamId}/invitations`, {
     method: "POST",
-    body,
-    auth: true,
+    body: { email },
+  });
+}
+
+export async function removeMember(teamId: string, userId: string): Promise<void> {
+  return api<void>(`/teams/${teamId}/members/${userId}`, {
+    method: "DELETE",
+  });
+}
+
+export async function getMyInvitations(): Promise<TeamInvitation[]> {
+  return api<TeamInvitation[]>("/invitations/me");
+}
+
+export async function acceptInvitation(id: string): Promise<void> {
+  return api<void>(`/invitations/${id}/accept`, {
+    method: "POST",
+  });
+}
+
+export async function declineInvitation(id: string): Promise<void> {
+  return api<void>(`/invitations/${id}/decline`, {
+    method: "POST",
   });
 }

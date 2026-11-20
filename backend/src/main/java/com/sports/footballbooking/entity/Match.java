@@ -1,116 +1,97 @@
 package com.sports.footballbooking.entity;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
-
 import java.time.OffsetDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
 
-/**
- * Represents a football match (friendly, pickup, or team vs team match).
- */
 @Entity
 @Table(name = "matches")
-@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Match extends BaseEntity {
 
-    @NotNull
-    @ManyToOne(fetch = FetchType.EAGER, optional = false)
-    @JoinColumn(name = "organizer_id", nullable = false)
-    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "passwordHash"})
-    private User organizer;
-
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "booking_id")
-    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
-    private Booking booking;
-
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "field_id")
-    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
-    private Field field;
-
-    @NotBlank
-    @Size(max = 200)
-    @Column(nullable = false, length = 200)
-    private String title;
-
-    @Column(columnDefinition = "TEXT")
-    private String description;
-
-    @NotNull
-    @Column(name = "match_date", nullable = false)
-    private OffsetDateTime matchDate;
-
-    @Column(name = "duration_minutes", nullable = false)
-    private int durationMinutes = 60;
-
-    @Column(name = "max_players")
-    private Integer maxPlayers = 10; // e.g. 10 for 5v5, 14 for 7v7, 22 for 11v11
-
-    @Size(max = 20)
-    @Column(nullable = false, length = 20)
-    private String status = "OPEN"; // OPEN, FULL, IN_PROGRESS, COMPLETED, CANCELLED
-
-    @Column(name = "is_public", nullable = false)
-    private boolean isPublic = true;
-
-    @Size(max = 100)
-    @Column(length = 100)
-    private String city;
-
-    @OneToMany(mappedBy = "match", fetch = FetchType.EAGER)
-    @JsonIgnoreProperties({"match"})
-    private List<MatchParticipant> participants = new ArrayList<>();
-
-    public Match() {}
-
-    public Match(User organizer, String title, OffsetDateTime matchDate, int durationMinutes) {
-        this.organizer = organizer;
-        this.title = title;
-        this.matchDate = matchDate;
-        this.durationMinutes = durationMinutes > 0 ? durationMinutes : 60;
-        this.status = "OPEN";
-        this.isPublic = true;
+    public enum MatchStatus {
+        PLANNED,
+        FINISHED,
+        CANCELLED
     }
 
-    // Getters and Setters
-    public User getOrganizer() { return organizer; }
-    public void setOrganizer(User organizer) { this.organizer = organizer; }
-    public Booking getBooking() { return booking; }
-    public void setBooking(Booking booking) { this.booking = booking; }
-    public Field getField() { return field; }
-    public void setField(Field field) { this.field = field; }
-    public String getTitle() { return title; }
-    public void setTitle(String title) { this.title = title; }
-    public String getDescription() { return description; }
-    public void setDescription(String description) { this.description = description; }
-    public OffsetDateTime getMatchDate() { return matchDate; }
-    public void setMatchDate(OffsetDateTime matchDate) { this.matchDate = matchDate; }
-    public int getDurationMinutes() { return durationMinutes; }
-    public void setDurationMinutes(int durationMinutes) { this.durationMinutes = durationMinutes; }
-    public Integer getMaxPlayers() { return maxPlayers; }
-    public void setMaxPlayers(Integer maxPlayers) { this.maxPlayers = maxPlayers; }
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
-    public boolean isPublic() { return isPublic; }
-    public void setPublic(boolean isPublic) { this.isPublic = isPublic; }
-    public String getCity() { return city; }
-    public void setCity(String city) { this.city = city; }
-    public List<MatchParticipant> getParticipants() { return participants; }
-    public void setParticipants(List<MatchParticipant> participants) {
-        if (this.participants == null) {
-            this.participants = new ArrayList<>();
-        } else {
-            this.participants.clear();
-        }
-        if (participants != null) {
-            this.participants.addAll(participants);
-        }
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "creator_id", nullable = false)
+    private User creator;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "home_team_id", nullable = false)
+    private Team homeTeam;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "away_team_id", nullable = false)
+    private Team awayTeam;
+
+    @Column(name = "start_at", nullable = false)
+    private OffsetDateTime startAt;
+
+    @Column(name = "duration_minutes", nullable = false)
+    private int durationMinutes;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private MatchStatus status = MatchStatus.PLANNED;
+
+    public Match() {
+    }
+
+    public Match(User creator, Team homeTeam, Team awayTeam, OffsetDateTime startAt, int durationMinutes) {
+        this.creator = creator;
+        this.homeTeam = homeTeam;
+        this.awayTeam = awayTeam;
+        this.startAt = startAt;
+        this.durationMinutes = durationMinutes;
+        this.status = MatchStatus.PLANNED;
+    }
+
+    public User getCreator() {
+        return creator;
+    }
+
+    public void setCreator(User creator) {
+        this.creator = creator;
+    }
+
+    public Team getHomeTeam() {
+        return homeTeam;
+    }
+
+    public void setHomeTeam(Team homeTeam) {
+        this.homeTeam = homeTeam;
+    }
+
+    public Team getAwayTeam() {
+        return awayTeam;
+    }
+
+    public void setAwayTeam(Team awayTeam) {
+        this.awayTeam = awayTeam;
+    }
+
+    public OffsetDateTime getStartAt() {
+        return startAt;
+    }
+
+    public void setStartAt(OffsetDateTime startAt) {
+        this.startAt = startAt;
+    }
+
+    public int getDurationMinutes() {
+        return durationMinutes;
+    }
+
+    public void setDurationMinutes(int durationMinutes) {
+        this.durationMinutes = durationMinutes;
+    }
+
+    public MatchStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(MatchStatus status) {
+        this.status = status;
     }
 }

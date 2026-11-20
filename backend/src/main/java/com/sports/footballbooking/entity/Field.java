@@ -1,80 +1,55 @@
 package com.sports.footballbooking.entity;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Positive;
-import jakarta.validation.constraints.Size;
-
 import java.math.BigDecimal;
-import java.time.OffsetDateTime;
-import java.util.UUID;
+import java.time.LocalTime;
 
-/**
- * Represents a football pitch/field.
- * Contains football-specific characteristics like field format (5v5, 7v7, 11v11),
- * surface type, lighting, locker rooms, and parking.
- */
 @Entity
 @Table(name = "fields")
-@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Field extends BaseEntity {
 
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "owner_id")
-    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "passwordHash"})
+    public enum FieldStatus {
+        PENDING,
+        APPROVED,
+        REJECTED
+    }
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "owner_id", nullable = false)
     private User owner;
 
-    @NotBlank
-    @Size(max = 100)
-    @Column(nullable = false, length = 100)
+    @Column(nullable = false, length = 150)
     private String name;
 
     @Column(columnDefinition = "TEXT")
     private String description;
 
-    @Size(max = 500)
-    @Column(length = 500)
+    @Column(nullable = false, length = 255)
     private String address;
 
-    @Size(max = 100)
-    @Column(length = 100)
+    @Column(nullable = false, length = 100)
     private String city;
 
-    @Size(max = 20)
-    @Column(name = "postal_code", length = 20)
-    private String postalCode;
-
-    @Column(precision = 10, scale = 7)
+    @Column(precision = 9, scale = 6)
     private BigDecimal latitude;
 
-    @Column(precision = 10, scale = 7)
+    @Column(precision = 9, scale = 6)
     private BigDecimal longitude;
 
-    @Size(max = 20)
     @Column(length = 20)
     private String phone;
 
-    @NotBlank
-    @Size(max = 10)
     @Column(name = "field_type", nullable = false, length = 10)
-    private String fieldType = "5v5"; // 5v5, 7v7, 11v11
+    private String fieldType;
 
-    @Size(max = 50)
     @Column(name = "surface_type", length = 50)
-    private String surfaceType; // Synthétique, Gazon naturel, Hybride
+    private String surfaceType;
 
-    @Column
     private Integer capacity;
 
-    @NotNull
-    @Positive
-    @Column(name = "price_per_hour", nullable = false, precision = 12, scale = 2)
+    @Column(name = "price_per_hour", nullable = false, precision = 10, scale = 2)
     private BigDecimal pricePerHour;
 
-    @NotBlank
-    @Size(max = 3)
     @Column(nullable = false, length = 3)
     private String currency = "MAD";
 
@@ -82,82 +57,196 @@ public class Field extends BaseEntity {
     private boolean indoor = false;
 
     @Column(name = "has_lights", nullable = false)
-    private boolean hasLights = false;
+    private boolean hasLights = true;
 
     @Column(name = "has_locker_room", nullable = false)
-    private boolean hasLockerRoom = false;
+    private boolean hasLockerRoom = true;
 
     @Column(name = "has_parking", nullable = false)
-    private boolean hasParking = false;
+    private boolean hasParking = true;
 
-    @Size(max = 10)
-    @Column(name = "open_time", length = 10, nullable = false)
-    private String openTime = "09:00";
+    @Column(name = "open_time", nullable = false)
+    private LocalTime openTime;
 
-    @Size(max = 10)
-    @Column(name = "close_time", length = 10, nullable = false)
-    private String closeTime = "23:00";
+    @Column(name = "close_time", nullable = false)
+    private LocalTime closeTime;
 
-    @Column(nullable = false)
-    private boolean active = true;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private FieldStatus status = FieldStatus.PENDING;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "reviewed_by_id")
+    private User reviewedBy;
 
     public Field() {
-        // Required by JPA
     }
 
-    public Field(String name, String city, String fieldType, BigDecimal pricePerHour) {
+    public User getOwner() {
+        return owner;
+    }
+
+    public void setOwner(User owner) {
+        this.owner = owner;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
         this.name = name;
-        this.city = city;
-        this.fieldType = fieldType != null ? fieldType : "5v5";
-        this.pricePerHour = pricePerHour;
-        this.currency = "MAD";
-        this.active = true;
     }
 
-    // ==================== Getters ====================
+    public String getDescription() {
+        return description;
+    }
 
-    public User getOwner() { return owner; }
-    public String getName() { return name; }
-    public String getDescription() { return description; }
-    public String getAddress() { return address; }
-    public String getCity() { return city; }
-    public String getPostalCode() { return postalCode; }
-    public BigDecimal getLatitude() { return latitude; }
-    public BigDecimal getLongitude() { return longitude; }
-    public String getPhone() { return phone; }
-    public String getFieldType() { return fieldType; }
-    public String getSurfaceType() { return surfaceType; }
-    public Integer getCapacity() { return capacity; }
-    public BigDecimal getPricePerHour() { return pricePerHour; }
-    public String getCurrency() { return currency; }
-    public boolean isIndoor() { return indoor; }
-    public boolean isHasLights() { return hasLights; }
-    public boolean isHasLockerRoom() { return hasLockerRoom; }
-    public boolean isHasParking() { return hasParking; }
-    public String getOpenTime() { return openTime != null ? openTime : "09:00"; }
-    public String getCloseTime() { return closeTime != null ? closeTime : "23:00"; }
-    public boolean isActive() { return active; }
+    public void setDescription(String description) {
+        this.description = description;
+    }
 
-    // ==================== Setters ====================
-    public void setOwner(User owner) { this.owner = owner; }
-    public void setName(String name) { this.name = name; }
-    public void setDescription(String description) { this.description = description; }
-    public void setAddress(String address) { this.address = address; }
-    public void setCity(String city) { this.city = city; }
-    public void setPostalCode(String postalCode) { this.postalCode = postalCode; }
-    public void setLatitude(BigDecimal latitude) { this.latitude = latitude; }
-    public void setLongitude(BigDecimal longitude) { this.longitude = longitude; }
-    public void setPhone(String phone) { this.phone = phone; }
-    public void setFieldType(String fieldType) { this.fieldType = fieldType; }
-    public void setSurfaceType(String surfaceType) { this.surfaceType = surfaceType; }
-    public void setCapacity(Integer capacity) { this.capacity = capacity; }
-    public void setPricePerHour(BigDecimal pricePerHour) { this.pricePerHour = pricePerHour; }
-    public void setCurrency(String currency) { this.currency = currency; }
-    public void setIndoor(boolean indoor) { this.indoor = indoor; }
-    public void setHasLights(boolean hasLights) { this.hasLights = hasLights; }
-    public void setHasLockerRoom(boolean hasLockerRoom) { this.hasLockerRoom = hasLockerRoom; }
-    public void setHasParking(boolean hasParking) { this.hasParking = hasParking; }
-    public void setOpenTime(String openTime) { this.openTime = openTime != null ? openTime : "09:00"; }
-    public void setCloseTime(String closeTime) { this.closeTime = closeTime != null ? closeTime : "23:00"; }
-    public void setActive(boolean active) { this.active = active; }
+    public String getAddress() {
+        return address;
+    }
+
+    public void setAddress(String address) {
+        this.address = address;
+    }
+
+    public String getCity() {
+        return city;
+    }
+
+    public void setCity(String city) {
+        this.city = city;
+    }
+
+    public BigDecimal getLatitude() {
+        return latitude;
+    }
+
+    public void setLatitude(BigDecimal latitude) {
+        this.latitude = latitude;
+    }
+
+    public BigDecimal getLongitude() {
+        return longitude;
+    }
+
+    public void setLongitude(BigDecimal longitude) {
+        this.longitude = longitude;
+    }
+
+    public String getPhone() {
+        return phone;
+    }
+
+    public void setPhone(String phone) {
+        this.phone = phone;
+    }
+
+    public String getFieldType() {
+        return fieldType;
+    }
+
+    public void setFieldType(String fieldType) {
+        this.fieldType = fieldType;
+    }
+
+    public String getSurfaceType() {
+        return surfaceType;
+    }
+
+    public void setSurfaceType(String surfaceType) {
+        this.surfaceType = surfaceType;
+    }
+
+    public Integer getCapacity() {
+        return capacity;
+    }
+
+    public void setCapacity(Integer capacity) {
+        this.capacity = capacity;
+    }
+
+    public BigDecimal getPricePerHour() {
+        return pricePerHour;
+    }
+
+    public void setPricePerHour(BigDecimal pricePerHour) {
+        this.pricePerHour = pricePerHour;
+    }
+
+    public String getCurrency() {
+        return currency;
+    }
+
+    public void setCurrency(String currency) {
+        this.currency = currency;
+    }
+
+    public boolean isIndoor() {
+        return indoor;
+    }
+
+    public void setIndoor(boolean indoor) {
+        this.indoor = indoor;
+    }
+
+    public boolean isHasLights() {
+        return hasLights;
+    }
+
+    public void setHasLights(boolean hasLights) {
+        this.hasLights = hasLights;
+    }
+
+    public boolean isHasLockerRoom() {
+        return hasLockerRoom;
+    }
+
+    public void setHasLockerRoom(boolean hasLockerRoom) {
+        this.hasLockerRoom = hasLockerRoom;
+    }
+
+    public boolean isHasParking() {
+        return hasParking;
+    }
+
+    public void setHasParking(boolean hasParking) {
+        this.hasParking = hasParking;
+    }
+
+    public LocalTime getOpenTime() {
+        return openTime;
+    }
+
+    public void setOpenTime(LocalTime openTime) {
+        this.openTime = openTime;
+    }
+
+    public LocalTime getCloseTime() {
+        return closeTime;
+    }
+
+    public void setCloseTime(LocalTime closeTime) {
+        this.closeTime = closeTime;
+    }
+
+    public FieldStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(FieldStatus status) {
+        this.status = status;
+    }
+
+    public User getReviewedBy() {
+        return reviewedBy;
+    }
+
+    public void setReviewedBy(User reviewedBy) {
+        this.reviewedBy = reviewedBy;
+    }
 }

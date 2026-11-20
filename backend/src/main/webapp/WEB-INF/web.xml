@@ -4,12 +4,24 @@
          xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee https://jakarta.ee/xml/ns/jakartaee/web-app_6_0.xsd"
          version="6.0">
 
+    <context-param>
+        <param-name>resteasy.role.based.security</param-name>
+        <param-value>true</param-value>
+    </context-param>
     <data-source>
         <name>java:jboss/datasources/FootballBookingDS</name>
         <class-name>org.postgresql.ds.PGSimpleDataSource</class-name>
-        <url>${db.url:jdbc:postgresql://localhost:5432/football_booking?stringtype=unspecified}</url>
-        <user>${db.user:postgres}</user>
-        <password>${db.password:postgres}</password>
+        <user>${db.user}</user>
+        <password>${db.password}</password>
     </data-source>
+    <security-role>
+        <role-name>PLAYER</role-name>
+    </security-role>
+    <security-role>
+        <role-name>FIELD_MANAGER</role-name>
+    </security-role>
+    <security-role>
+        <role-name>ADMIN</role-name>
+    </security-role>
 
 </web-app>
