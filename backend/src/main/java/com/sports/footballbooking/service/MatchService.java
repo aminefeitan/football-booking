@@ -1,161 +1,124 @@
 package com.sports.footballbooking.service;
 
+import com.sports.footballbooking.dto.CreateMatchRequest;
+import com.sports.footballbooking.dto.MatchResponse;
 import com.sports.footballbooking.entity.Booking;
-import com.sports.footballbooking.entity.Field;
 import com.sports.footballbooking.entity.Match;
-import com.sports.footballbooking.entity.MatchParticipant;
+import com.sports.footballbooking.entity.Team;
 import com.sports.footballbooking.entity.User;
-import com.sports.footballbooking.exception.BusinessException;
-import com.sports.footballbooking.repository.BookingRepository;
-import com.sports.footballbooking.repository.FieldRepository;
-import com.sports.footballbooking.repository.MatchRepository;
-import com.sports.footballbooking.repository.UserRepository;
+import com.sports.footballbooking.repository.*;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
+import jakarta.ws.rs.BadRequestException;
+import jakarta.ws.rs.ForbiddenException;
+import jakarta.ws.rs.NotFoundException;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @ApplicationScoped
-@Transactional
 public class MatchService {
 
     @Inject
     private MatchRepository matchRepository;
 
     @Inject
-    private FieldRepository fieldRepository;
+    private TeamRepository teamRepository;
 
     @Inject
-    private BookingRepository bookingRepository;
+    private TeamMemberRepository teamMemberRepository;
 
     @Inject
     private UserRepository userRepository;
 
-    // ==================== DTOs compacts ====================
+    @Inject
+    private BookingRepository bookingRepository;
 
-    public record CreateMatchRequest(
-            @NotBlank String title,
-            String description,
-            @NotNull OffsetDateTime matchDate,
-            int durationMinutes,
-            Integer maxPlayers,
-            boolean isPublic,
-            String city,
-            UUID fieldId,
-            UUID bookingId
-    ) {
-        public CreateMatchRequest(String title, OffsetDateTime matchDate) {
-            this(title, null, matchDate, 60, null, true, null, null, null);
+    @Transactional
+    public MatchResponse createMatch(UUID callerId, CreateMatchRequest req) {
+        if (req.homeTeamId().equals(req.awayTeamId())) {
+            throw new BadRequestException("L'équipe à domicile et l'équipe adverse doivent être distinctes");
         }
+
+        if (req.durationMinutes() < 30 || req.durationMinutes() > 240) {
+            throw new BadRequestException("La durée d'un match doit être comprise entre 30 et 240 minutes");
+        }
+
+        if (!req.startAt().isAfter(OffsetDateTime.now())) {
+            throw new BadRequestException("La date de début du match doit être dans le futur");
+        }
+
+        // Caller must be captain of homeTeam
+        if (!teamMemberRepository.isCaptain(req.homeTeamId(), callerId)) {
+            throw new ForbiddenException("Seul le capitaine de l'équipe à domicile peut créer le match");
+        }
+
+        User creator = userRepository.findById(callerId)
+                .orElseThrow(() -> new NotFoundException("Joueur introuvable"));
+
+        Team homeTeam = teamRepository.findById(req.homeTeamId())
+                .orElseThrow(() -> new NotFoundException("Équipe à domicile introuvable"));
+
+        Team awayTeam = teamRepository.findById(req.awayTeamId())
+                .orElseThrow(() -> new NotFoundException("Équipe adverse introuvable"));
+
+        Match match = new Match(creator, homeTeam, awayTeam, req.startAt(), req.durationMinutes());
+        matchRepository.persist(match);
+
+        return MatchResponse.from(match);
     }
 
-    public record JoinMatchRequest(
-            String teamSide
-    ) {
-        public JoinMatchRequest() {
-            this("A");
-        }
+    public List<MatchResponse> getMyMatches(UUID userId) {
+        return matchRepository.findByUserId(userId).stream()
+                .map(MatchResponse::from)
+                .toList();
     }
 
-    // ==================== Méthodes ====================
+    public MatchResponse getMatchDetails(UUID matchId, UUID userId, boolean isAdmin) {
+        Match match = matchRepository.findById(matchId)
+                .orElseThrow(() -> new NotFoundException("Match introuvable"));
 
-    public Match createMatch(UUID organizerId, CreateMatchRequest req) {
-        User organizer = userRepository.getById(organizerId);
+        if (!isAdmin) {
+            boolean isCreator = match.getCreator().getId().equals(userId);
+            boolean inHomeTeam = teamMemberRepository.isMember(match.getHomeTeam().getId(), userId);
+            boolean inAwayTeam = teamMemberRepository.isMember(match.getAwayTeam().getId(), userId);
 
-        int duration = req.durationMinutes() > 0 ? req.durationMinutes() : 60;
-        Match match = new Match(organizer, req.title(), req.matchDate(), duration);
-        match.setDescription(req.description());
-        match.setMaxPlayers(req.maxPlayers());
-        match.setPublic(req.isPublic());
-        match.setCity(req.city());
+            boolean isFieldOwner = false;
+            Optional<Booking> activeBooking = bookingRepository.findActiveByMatch(matchId);
+            if (activeBooking.isPresent()) {
+                isFieldOwner = activeBooking.get().getField().getOwner().getId().equals(userId);
+            }
 
-        if (req.fieldId() != null) {
-            Field field = fieldRepository.getById(req.fieldId());
-            match.setField(field);
-            if (match.getCity() == null) match.setCity(field.getCity());
+            if (!isCreator && !inHomeTeam && !inAwayTeam && !isFieldOwner) {
+                throw new NotFoundException("Match introuvable");
+            }
         }
 
-        if (req.bookingId() != null) {
-            Booking booking = bookingRepository.getById(req.bookingId());
-            match.setBooking(booking);
-        }
-
-        match = matchRepository.save(match);
-        matchRepository.flush();
-
-        // L'organisateur est automatiquement participant côté A
-        MatchParticipant organizerPart = new MatchParticipant(match, organizer, "A");
-        organizerPart.setStatus("CONFIRMED");
-        matchRepository.persistParticipant(organizerPart);
-
-        return getMatchById(match.getId());
+        return MatchResponse.from(match);
     }
 
-    public Match getMatchById(UUID matchId) {
-        Match match = matchRepository.getById(matchId);
-        match.setParticipants(matchRepository.findParticipants(matchId));
-        return match;
-    }
+    @Transactional
+    public void cancelMatch(UUID matchId, UUID userId, boolean isAdmin) {
+        Match match = matchRepository.findById(matchId)
+                .orElseThrow(() -> new NotFoundException("Match introuvable"));
 
-    public List<Match> listUpcomingMatches(String city) {
-        List<Match> matches = matchRepository.findUpcoming(city);
-        matches.forEach(m -> m.setParticipants(matchRepository.findParticipants(m.getId())));
-        return matches;
-    }
-
-    public MatchParticipant joinMatch(UUID matchId, UUID userId, JoinMatchRequest req) {
-        Match match = matchRepository.getById(matchId);
-        if (!"OPEN".equalsIgnoreCase(match.getStatus())) {
-            throw new BusinessException("Ce match n'est pas ouvert aux inscriptions (statut: " + match.getStatus() + ")");
+        boolean isCreator = match.getCreator().getId().equals(userId);
+        if (!isCreator && !isAdmin) {
+            throw new ForbiddenException("Seul le créateur du match ou un administrateur peut annuler ce match");
         }
 
-        User user = userRepository.getById(userId);
+        match.setStatus(Match.MatchStatus.CANCELLED);
 
-        if (matchRepository.isParticipant(matchId, userId)) {
-            throw new BusinessException("Vous êtes déjà inscrit à ce match");
+        // Cancel associated active booking in the same transaction
+        Optional<Booking> activeBooking = bookingRepository.findActiveByMatch(matchId);
+        if (activeBooking.isPresent()) {
+            Booking b = activeBooking.get();
+            b.setStatus(Booking.BookingStatus.CANCELLED);
+            b.setCancelledAt(OffsetDateTime.now());
+            b.setReason("Annulation du match associé");
         }
-
-        List<MatchParticipant> current = matchRepository.findParticipants(matchId);
-        if (match.getMaxPlayers() != null && current.size() >= match.getMaxPlayers()) {
-            match.setStatus("FULL");
-            matchRepository.save(match);
-            throw new BusinessException("Ce match est complet");
-        }
-
-        String teamSide = (req != null && req.teamSide() != null) ? req.teamSide() : "A";
-        MatchParticipant participant = new MatchParticipant(match, user, teamSide);
-        matchRepository.persistParticipant(participant);
-
-        if (match.getMaxPlayers() != null && (current.size() + 1) >= match.getMaxPlayers()) {
-            match.setStatus("FULL");
-            matchRepository.save(match);
-        }
-
-        return participant;
-    }
-
-    public void leaveMatch(UUID matchId, UUID userId) {
-        matchRepository.removeParticipant(matchId, userId);
-
-        Match match = matchRepository.findById(matchId).orElse(null);
-        if (match != null && "FULL".equalsIgnoreCase(match.getStatus())) {
-            match.setStatus("OPEN");
-            matchRepository.save(match);
-        }
-    }
-
-    public Match cancelMatch(UUID matchId, UUID userId) {
-        Match match = matchRepository.getById(matchId);
-        if (!match.getOrganizer().getId().equals(userId)) {
-            throw new BusinessException("Seul l'organisateur peut annuler ce match");
-        }
-        match.setStatus("CANCELLED");
-        matchRepository.save(match);
-        return getMatchById(match.getId());
     }
 }

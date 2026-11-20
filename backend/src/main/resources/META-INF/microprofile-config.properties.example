@@ -1,13 +1,5 @@
-# ==============================================================================
-# MicroProfile Config - Template d'exemple (Football Booking)
-# Copiez ce fichier vers 'microprofile-config.properties' et renseignez vos identifiants locaux.
-# ==============================================================================
-
-# ── Base de Données PostgreSQL ────────────────────────────────────────────────
-db.url=jdbc:postgresql://localhost:5432/football_booking?stringtype=unspecified
-db.user=postgres
-db.password=votre_mot_de_passe_securise
-
-# ── Sécurité & Authentification JWT ──────────────────────────────────────────
-jwt.secret=votre_cle_secrete_jwt_aleatoire_256bit_ici
-jwt.expiration.seconds=604800
+# Example Environment Variables:
+# JWT_SECRET=change-me-to-a-very-strong-secret-at-least-32-chars-long
+# DB_USER=postgres
+# DB_PASSWORD=your_password
+cors.allowed.origins=http://localhost:3000

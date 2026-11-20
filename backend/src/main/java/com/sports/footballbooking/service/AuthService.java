@@ -1,127 +1,88 @@
 package com.sports.footballbooking.service;
 
 import at.favre.lib.crypto.bcrypt.BCrypt;
-import com.sports.footballbooking.entity.Admin;
-import com.sports.footballbooking.entity.FieldManager;
-import com.sports.footballbooking.entity.Player;
+import com.sports.footballbooking.dto.AuthResponse;
+import com.sports.footballbooking.dto.LoginRequest;
+import com.sports.footballbooking.dto.RegisterRequest;
+import com.sports.footballbooking.dto.UserResponse;
 import com.sports.footballbooking.entity.User;
-import com.sports.footballbooking.exception.BusinessException;
 import com.sports.footballbooking.repository.UserRepository;
+import com.sports.footballbooking.security.JwtService;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
+import jakarta.ws.rs.ClientErrorException;
+import jakarta.ws.rs.ForbiddenException;
+import jakarta.ws.rs.NotAuthorizedException;
+import jakarta.ws.rs.core.Response;
 
-import java.util.List;
 import java.util.UUID;
 
 @ApplicationScoped
-@Transactional
 public class AuthService {
+
+    private static final String INVALID_CREDENTIALS_MSG = "Email ou mot de passe incorrect";
 
     @Inject
     private UserRepository userRepository;
 
     @Inject
-    private com.sports.footballbooking.config.JwtService jwtService;
+    private JwtService jwtService;
 
-    // ==================== DTOs compacts ====================
-
-    public record RegisterRequest(
-            @NotBlank @Email String email,
-            @NotBlank String password,
-            @NotBlank String firstName,
-            @NotBlank String lastName,
-            String phone,
-            User.Role role
-    ) {}
-
-    public record LoginRequest(
-            @NotBlank String email,
-            @NotBlank String password
-    ) {}
-
-    public record AuthResponse(
-            String token,
-            User user
-    ) {}
-
-    // ==================== Méthodes ====================
-
-    public AuthResponse register(RegisterRequest request) {
-        if (userRepository.existsByEmail(request.email())) {
-            throw new BusinessException("Un utilisateur avec cet email existe déjà");
+    @Transactional
+    public AuthResponse register(RegisterRequest req) {
+        String email = req.email().trim().toLowerCase();
+        if (userRepository.existsByEmail(email)) {
+            throw new ClientErrorException("Un compte avec cet email existe déjà", Response.Status.CONFLICT);
         }
 
-        String passwordHash = BCrypt.withDefaults().hashToString(12, request.password().toCharArray());
-        User.Role role = request.role() != null ? request.role() : User.Role.PLAYER;
-        User user;
+        String passwordHash = BCrypt.withDefaults().hashToString(12, req.password().toCharArray());
+        String phone = req.phone() != null && !req.phone().isBlank() ? req.phone().trim() : null;
 
-        switch (role) {
-            case PLAYER -> user = new Player(request.email(), passwordHash, request.firstName(), request.lastName());
-            case FIELD_MANAGER -> user = new FieldManager(request.email(), passwordHash, request.firstName(), request.lastName());
-            case ADMIN -> user = new Admin(request.email(), passwordHash, request.firstName(), request.lastName());
-            default -> throw new BusinessException("Rôle non supporté: " + role);
-        }
+        // Strict rule: role is ALWAYS PLAYER on registration
+        User user = new User(
+                email,
+                passwordHash,
+                req.firstName().trim(),
+                req.lastName().trim(),
+                phone,
+                User.Role.PLAYER
+        );
+        userRepository.persist(user);
 
-        if (request.phone() != null) user.setPhone(request.phone());
-
-        userRepository.save(user);
-        userRepository.flush();
-
-        String token = jwtService.generateToken(user);
-        return new AuthResponse(token, user);
+        String token = jwtService.generateToken(user.getId());
+        return new AuthResponse(token, UserResponse.from(user));
     }
 
-    public AuthResponse login(LoginRequest request) {
-        User user = userRepository.findByEmail(request.email())
-                .orElseThrow(() -> new BusinessException("Email ou mot de passe incorrect"));
+    public AuthResponse login(LoginRequest req) {
+        String email = req.email().trim().toLowerCase();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new NotAuthorizedException(INVALID_CREDENTIALS_MSG, "Bearer"));
 
-        if (user.getStatus() == User.Status.BANNED) {
-            throw new BusinessException("Ce compte est suspendu");
-        }
-
-        BCrypt.Result result = BCrypt.verifyer().verify(request.password().toCharArray(), user.getPasswordHash().toCharArray());
+        BCrypt.Result result = BCrypt.verifyer().verify(req.password().toCharArray(), user.getPasswordHash());
         if (!result.verified) {
-            throw new BusinessException("Email ou mot de passe incorrect");
+            throw new NotAuthorizedException(INVALID_CREDENTIALS_MSG, "Bearer");
         }
 
-        String token = jwtService.generateToken(user);
-        return new AuthResponse(token, user);
+        if (user.getStatus() != User.Status.ACTIVE) {
+            throw new ForbiddenException("Ce compte est " + user.getStatus().name().toLowerCase());
+        }
+
+        String token = jwtService.generateToken(user.getId());
+        return new AuthResponse(token, UserResponse.from(user));
     }
 
-    public User getUserById(UUID userId) {
-        return userRepository.getById(userId);
-    }
+    public User authenticate(String token) {
+        UUID userId = jwtService.validate(token)
+                .orElseThrow(() -> new NotAuthorizedException("Bearer"));
 
-    public List<User> getUsersByRole(User.Role role) {
-        return userRepository.findByRole(role);
-    }
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new NotAuthorizedException("Bearer"));
 
-    public List<User> getAllUsers() {
-        return userRepository.findAll();
-    }
+        if (user.getStatus() != User.Status.ACTIVE) {
+            throw new ForbiddenException("Ce compte est " + user.getStatus().name().toLowerCase());
+        }
 
-    public User updateUserStatus(UUID userId, User.Status newStatus) {
-        User user = getUserById(userId);
-        user.setStatus(newStatus);
-        userRepository.save(user);
         return user;
-    }
-
-    public UUID resolveUserIdFromToken(String token) {
-        if (token == null || token.isBlank()) return null;
-        var claims = jwtService.validateToken(token);
-        if (claims != null) {
-            return claims.userId();
-        }
-        // Fallback rétro-compatible pour tests
-        if (token.startsWith("Bearer-")) {
-            try {
-                return UUID.fromString(token.substring(7).trim());
-            } catch (IllegalArgumentException ignored) {}
-        }
-        return null;
     }
 }

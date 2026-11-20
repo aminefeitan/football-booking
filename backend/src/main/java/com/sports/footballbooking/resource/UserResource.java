@@ -1,33 +1,48 @@
 package com.sports.footballbooking.resource;
 
-import com.sports.footballbooking.entity.User;
-import com.sports.footballbooking.service.AuthService;
+import com.sports.footballbooking.dto.UpdatePasswordRequest;
+import com.sports.footballbooking.dto.UpdateProfileRequest;
+import com.sports.footballbooking.dto.UserResponse;
+import com.sports.footballbooking.service.UserService;
+import jakarta.enterprise.context.RequestScoped;
 import jakarta.inject.Inject;
+import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
+import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.core.SecurityContext;
 
-import java.util.List;
 import java.util.UUID;
 
 @Path("/users")
+@RequestScoped
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class UserResource {
 
     @Inject
-    private AuthService authService;
+    private UserService userService;
 
     @GET
-    @Path("/{id}")
-    public Response getUserById(@PathParam("id") UUID id) {
-        User user = authService.getUserById(id);
-        return Response.ok(user).build();
+    @Path("/me")
+    public UserResponse getProfile(@Context SecurityContext sec) {
+        UUID userId = UUID.fromString(sec.getUserPrincipal().getName());
+        return userService.getProfile(userId);
     }
 
-    @GET
-    public Response listUsersByRole(@QueryParam("role") User.Role role) {
-        List<User> users = authService.getUsersByRole(role);
-        return Response.ok(users).build();
+    @PUT
+    @Path("/me")
+    public UserResponse updateProfile(@Context SecurityContext sec, @Valid UpdateProfileRequest req) {
+        UUID userId = UUID.fromString(sec.getUserPrincipal().getName());
+        return userService.updateProfile(userId, req);
+    }
+
+    @PUT
+    @Path("/me/password")
+    public Response updatePassword(@Context SecurityContext sec, @Valid UpdatePasswordRequest req) {
+        UUID userId = UUID.fromString(sec.getUserPrincipal().getName());
+        userService.updatePassword(userId, req);
+        return Response.noContent().build();
     }
 }

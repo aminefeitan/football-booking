@@ -1,512 +1,315 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { motion, AnimatePresence } from "framer-motion";
-import { Share, CopySimple, Check, Lock, User, SoccerBall } from "@phosphor-icons/react";
-import { useAuth } from "@/context/AuthContext";
-import { Stepper } from "@/components/ui/Stepper";
-import { Button } from "@/components/ui/Button";
-import { SlotBoard } from "@/components/booking/SlotBoard";
-import { PitchPicker } from "@/components/booking/PitchPicker";
+import {
+  Ticket,
+  SoccerBall,
+  Calendar,
+  Clock,
+  MapPin,
+  CheckCircle,
+  WarningCircle,
+  ArrowLeft,
+  Trophy,
+} from "@phosphor-icons/react";
+import { useAuth, ProtectedRoute } from "@/context/AuthContext";
 import { getFields, getFieldById, getFieldSlots } from "@/services/fields.service";
+import { getMyMatches, getMatchById } from "@/services/matches.service";
 import { createBooking } from "@/services/bookings.service";
-import { processPayment } from "@/services/payments.service";
-import { MOCK_FIELDS } from "@/lib/mock-data";
-import { formatPrice, formatFieldType, formatDate, formatWorkingHours } from "@/lib/utils";
-import type { Field } from "@/lib/types";
+import { Button } from "@/components/ui/Button";
+import { formatDateTime, formatDate, money } from "@/lib/format";
+import type { Field, Match } from "@/lib/types";
 
-const STEPS = [
-  { label: "Terrain", description: "Choisir le terrain" },
-  { label: "Créneau", description: "Choisir l'horaire" },
-  { label: "Paiement", description: "Confirmer et payer" },
-];
-
-const paymentSchema = z.object({
-  paymentMethod: z.enum(["CARD", "CASH", "TRANSFER"]),
-  notes: z.string().optional(),
-});
-
-type PaymentForm = z.infer<typeof paymentSchema>;
-
-function BookingContent() {
+function ReserverContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { isAuthenticated, loading } = useAuth();
-  const preselectedFieldId = searchParams.get("fieldId") ?? undefined;
-  const paramDate = searchParams.get("date");
-  const paramTime = searchParams.get("time");
+  const paramMatchId = searchParams.get("matchId") ?? "";
+  const paramFieldId = searchParams.get("fieldId") ?? "";
 
-  const [step, setStep] = useState(preselectedFieldId ? 1 : 0);
-  const [selectedFieldId, setSelectedFieldId] = useState<string | undefined>(preselectedFieldId);
-  const [selectedDate, setSelectedDate] = useState<string>(
-    paramDate ?? new Date(Date.now() + 24 * 3600 * 1000).toISOString().slice(0, 10)
-  );
-  const [selectedTime, setSelectedTime] = useState<string | undefined>(paramTime ?? undefined);
-  const [inviteCopied, setInviteCopied] = useState(false);
-  const [bookingId, setBookingId] = useState<string | undefined>();
-  const [paymentError, setPaymentError] = useState<string | undefined>();
+  const [selectedMatchId, setSelectedMatchId] = useState(paramMatchId);
+  const [selectedFieldId, setSelectedFieldId] = useState(paramFieldId);
+  const [notes, setNotes] = useState("");
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [successBookingId, setSuccessBookingId] = useState<string | null>(null);
 
-  const { data: allFields = [], isLoading: fieldsLoading } = useQuery({
-    queryKey: ["all-fields"],
+  // Matchs créés par l'utilisateur encore PLANNED
+  const { data: myMatches = [], isLoading: loadingMatches } = useQuery({
+    queryKey: ["my-matches"],
+    queryFn: getMyMatches,
+  });
+
+  const plannedMatches = myMatches.filter((m: Match) => m.status === "PLANNED");
+
+  const { data: selectedMatch } = useQuery({
+    queryKey: ["match", selectedMatchId],
+    queryFn: () => getMatchById(selectedMatchId),
+    enabled: !!selectedMatchId,
+  });
+
+  // Terrains approuvés
+  const { data: fields = [], isLoading: loadingFields } = useQuery({
+    queryKey: ["fields"],
     queryFn: () => getFields(),
   });
 
   const { data: selectedField } = useQuery({
     queryKey: ["field", selectedFieldId],
-    queryFn: () => getFieldById(selectedFieldId!),
+    queryFn: () => getFieldById(selectedFieldId),
     enabled: !!selectedFieldId,
   });
 
+  // Créneaux du terrain sélectionné à la date du match
+  const matchDateStr = selectedMatch?.startAt ? selectedMatch.startAt.slice(0, 10) : undefined;
   const { data: slots = [] } = useQuery({
-    queryKey: ["field-slots", selectedFieldId, selectedDate, selectedField?.openTime, selectedField?.closeTime],
-    queryFn: () => getFieldSlots(selectedFieldId!, selectedDate, selectedField),
-    enabled: !!selectedFieldId,
+    queryKey: ["slots", selectedFieldId, matchDateStr],
+    queryFn: () => getFieldSlots(selectedFieldId, matchDateStr),
+    enabled: !!selectedFieldId && !!matchDateStr,
   });
 
-  // Si le créneau précédemment sélectionné n'est plus disponible (ex: heure passée), on le désélectionne
-  useEffect(() => {
-    if (selectedTime && slots.length > 0 && !slots.some((s) => s.time === selectedTime && s.status === "available")) {
-      setSelectedTime(undefined);
-    }
-  }, [slots, selectedTime]);
-
-  const { register, handleSubmit, formState: { errors } } = useForm<PaymentForm>({
-    resolver: zodResolver(paymentSchema),
-    defaultValues: { paymentMethod: "CARD" },
-  });
-
-  const bookingMutation = useMutation({
-    mutationFn: async (vars: { fieldId: string; startAt: string; endAt: string; notes?: string; paymentMethod: "CARD" | "CASH" | "TRANSFER" }) => {
-      const { paymentMethod, ...bookingPayload } = vars;
-      const booking = await createBooking(bookingPayload);
-      await processPayment({ bookingId: booking.id, paymentMethod });
-      return booking;
-    },
+  const bookMut = useMutation({
+    mutationFn: createBooking,
     onSuccess: (booking) => {
-      setBookingId(booking.id);
-      setPaymentError(undefined);
-      setStep(3); // success
+      setSuccessBookingId(booking.id);
+      setErrorMsg(null);
     },
     onError: (err: unknown) => {
-      const message = err instanceof Error ? err.message : "Le paiement a échoué. Veuillez réessayer.";
-      setPaymentError(message);
+      const msg = err instanceof Error ? err.message : "Erreur lors de la réservation.";
+      setErrorMsg(msg);
     },
   });
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-nuit-pelouse flex items-center justify-center px-4">
-        <div className="border-2 border-encre bg-encre p-8 text-center shadow-brutal animate-pulse">
-          <div className="font-mono text-sm text-vert-projecteur uppercase tracking-widest">
-            Vérification de la session...
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg(null);
+    if (!selectedMatchId || !selectedFieldId) return;
 
-  // Garde : Un invité ne peut pas réserver de terrain, il doit se connecter
-  if (!isAuthenticated) {
-    const redirectUrl = preselectedFieldId
-      ? `/reserver?fieldId=${preselectedFieldId}`
-      : "/reserver";
-
-    return (
-      <div className="min-h-screen bg-nuit-pelouse flex items-center justify-center px-4 py-16">
-        <div className="max-w-md w-full border-2 border-encre bg-encre p-8 shadow-brutal-xl text-center">
-          <div className="inline-flex items-center gap-2 border-2 border-vert-projecteur bg-vert-projecteur text-encre px-3 py-1 font-mono font-bold text-xs uppercase tracking-widest mb-6 shadow-brutal">
-            <Lock size={14} weight="bold" />
-            Connexion Requise
-          </div>
-
-          <div className="w-16 h-16 border-2 border-encre bg-vert-projecteur text-encre flex items-center justify-center mx-auto mb-6 shadow-brutal">
-            <SoccerBall size={36} weight="fill" />
-          </div>
-
-          <h1 className="font-display font-black text-3xl uppercase text-craie mb-3">
-            Réservation <span className="text-vert-projecteur">de terrain</span>
-          </h1>
-
-          <p className="text-craie/70 text-sm font-body mb-8 leading-relaxed">
-            Les visiteurs peuvent consulter librement les terrains et leurs fiches détaillées, mais la réservation d&apos;un créneau nécessite un compte joueur FootBook.
-          </p>
-
-          <div className="space-y-3">
-            <Button
-              variant="primary"
-              size="lg"
-              className="w-full shadow-brutal"
-              onClick={() => router.push(`/auth?redirect=${encodeURIComponent(redirectUrl)}`)}
-              icon={<User size={16} weight="bold" />}
-            >
-              Se connecter pour réserver
-            </Button>
-
-            <Button
-              variant="ghost"
-              size="md"
-              className="w-full"
-              onClick={() => router.push(preselectedFieldId ? `/terrains/${preselectedFieldId}` : "/terrains")}
-            >
-              Retour à la fiche terrain
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const handleFieldSelect = (fieldId: string) => {
-    setSelectedFieldId(fieldId);
-    setStep(1);
-  };
-
-  const handleTimeSelect = (time: string) => {
-    setSelectedTime(time);
-  };
-
-  const goToPayment = () => {
-    if (selectedTime) setStep(2);
-  };
-
-  const handlePayment = handleSubmit(async (data) => {
-    if (!isAuthenticated) {
-      router.push(`/auth?redirect=/reserver?fieldId=${selectedFieldId}`);
-      return;
-    }
-    if (!selectedFieldId || !selectedTime) return;
-    setPaymentError(undefined);
-    const startAtDate = new Date(`${selectedDate}T${selectedTime}:00`);
-    const startAt = startAtDate.toISOString();
-    const endAtDate = new Date(startAtDate.getTime() + 60 * 60 * 1000);
-    const endAt = endAtDate.toISOString();
-
-    bookingMutation.mutate({
+    bookMut.mutate({
+      matchId: selectedMatchId,
       fieldId: selectedFieldId,
-      startAt,
-      endAt,
-      notes: data.notes,
-      paymentMethod: data.paymentMethod,
+      notes: notes.trim() || undefined,
     });
-  });
-
-  const copyInviteLink = () => {
-    navigator.clipboard.writeText(window.location.href);
-    setInviteCopied(true);
-    setTimeout(() => setInviteCopied(false), 2000);
   };
 
-  const totalAmount = selectedField ? selectedField.pricePerHour * 1 : 0;
+  if (successBookingId) {
+    return (
+      <div className="min-h-screen bg-nuit-pelouse flex items-center justify-center p-4">
+        <div className="border-2 border-encre bg-encre max-w-md w-full p-8 shadow-brutal text-center space-y-5">
+          <div className="w-16 h-16 border-2 border-vert-projecteur bg-vert-projecteur/15 text-vert-projecteur flex items-center justify-center mx-auto">
+            <CheckCircle size={36} weight="fill" />
+          </div>
+          <h1 className="font-display font-black text-3xl uppercase text-craie">
+            Réservation <span className="text-vert-projecteur">Envoyée</span> !
+          </h1>
+          <p className="font-mono text-xs text-craie/60">
+            Votre demande a été transmise au gérant du terrain. Elle est actuellement en attente de confirmation.
+          </p>
+          <div className="flex gap-3 justify-center pt-2">
+            <Link
+              href="/mes-reservations"
+              className="px-4 py-2 border-2 border-vert-projecteur bg-vert-projecteur text-encre font-mono text-xs font-bold uppercase tracking-wider shadow-brutal hover:bg-vert-projecteur/90 transition-colors"
+            >
+              Voir mes réservations
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-nuit-pelouse">
-      <div className="max-w-6xl mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <div aria-hidden="true" className="font-display font-black text-vert-projecteur/10 text-[60px] leading-none select-none -mb-2">RÉSERVER</div>
-          <h1 className="font-display font-black text-craie uppercase text-4xl leading-none">
-            Réservation
+    <div className="min-h-screen bg-nuit-pelouse pb-20">
+      <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
+        <div>
+          <div className="font-mono text-xs uppercase tracking-widest text-vert-projecteur mb-1">
+            Réservation Officielle
+          </div>
+          <h1 className="font-display font-black text-4xl sm:text-5xl uppercase tracking-tight text-craie">
+            Réserver un <span className="text-vert-projecteur">Terrain</span>
           </h1>
+          <p className="font-mono text-xs text-craie/60 mt-1">
+            Associez un terrain disponible à l'un de vos matchs planifiés.
+          </p>
         </div>
 
-        {/* Stepper */}
-        {step < 3 && (
-          <div className="mb-10">
-            <Stepper steps={STEPS} currentStep={step} />
+        {errorMsg && (
+          <div className="p-3 border-2 border-orange-sifflet bg-orange-sifflet/10 text-orange-sifflet font-mono text-xs flex items-center gap-2">
+            <WarningCircle size={18} weight="bold" />
+            <span>{errorMsg}</span>
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main content */}
-          <div className="lg:col-span-2">
-            <AnimatePresence mode="wait">
-              {/* Step 0: Choisir terrain */}
-              {step === 0 && (
-                <motion.div
-                  key="step-0"
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 20 }}
-                  className="space-y-6"
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Étape 1 : Choisir le match */}
+          <div className="border-2 border-encre bg-encre p-5 shadow-brutal space-y-3">
+            <div className="flex items-center gap-2 border-b border-encre/60 pb-2">
+              <Trophy size={18} weight="bold" className="text-vert-projecteur" />
+              <h2 className="font-mono text-xs font-bold uppercase tracking-wider text-craie">
+                1. Sélectionner le match à disputer
+              </h2>
+            </div>
+
+            {loadingMatches ? (
+              <p className="font-mono text-xs text-craie/40 animate-pulse">Chargement de vos matchs…</p>
+            ) : plannedMatches.length === 0 ? (
+              <div className="p-4 bg-nuit-pelouse border border-encre/60 text-center space-y-2">
+                <p className="font-mono text-xs text-craie/60">
+                  Vous n'avez aucun match planifié prêt pour réservation.
+                </p>
+                <Link
+                  href="/matches"
+                  className="inline-block font-mono text-xs font-bold uppercase text-vert-projecteur hover:underline"
                 >
-                  <h2 className="font-display font-black text-craie uppercase text-2xl">
-                    1. Choisir un terrain
-                  </h2>
-                  {fieldsLoading ? (
-                    <div className="font-mono text-sm text-vert-projecteur animate-pulse py-6">
-                      Chargement des terrains depuis la base de données...
-                    </div>
-                  ) : allFields.length === 0 ? (
-                    <div className="border-2 border-encre bg-encre p-8 text-center shadow-brutal font-mono text-sm text-craie/60">
-                      Aucun terrain enregistré dans la base de données pour le moment.
-                    </div>
-                  ) : (
-                    <>
-                      <PitchPicker
-                        zones={allFields.slice(0, 3).map((f, i) => ({
-                          id: f.id,
-                          label: f.name,
-                          status: i === 0 ? "available" : i === 1 ? "last_places" : "reserved",
-                          x: 10 + i * 135,
-                          y: 20,
-                          w: 120,
-                          h: 100,
-                        }))}
-                        selectedZone={selectedFieldId}
-                        onSelect={handleFieldSelect}
-                        className="mb-4"
-                      />
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        {allFields.map((field) => (
-                          <button
-                            key={field.id}
-                            type="button"
-                            onClick={() => handleFieldSelect(field.id)}
-                            className={`border-2 p-4 text-left transition-all ${
-                              selectedFieldId === field.id
-                                ? "border-vert-projecteur bg-vert-projecteur/10 shadow-brutal-green"
-                                : "border-encre/40 hover:border-craie/50"
-                            }`}
-                          >
-                            <div className="font-display font-black text-craie text-lg uppercase">{field.name}</div>
-                            <div className="font-mono text-vert-projecteur font-bold">{formatPrice(field.pricePerHour, field.currency)}/h</div>
-                            <div className="text-xs text-craie/50 font-mono mt-1">{field.city} · {formatFieldType(field.fieldType)}</div>
-                          </button>
-                        ))}
-                      </div>
-                    </>
-                  )}
-                </motion.div>
-              )}
-
-              {/* Step 1: Choisir créneau */}
-              {step === 1 && (
-                <motion.div
-                  key="step-1"
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 20 }}
-                  className="space-y-6"
-                >
-                  <h2 className="font-display font-black text-craie uppercase text-2xl">
-                    2. Choisir un créneau
-                  </h2>
-                  {/* Date picker */}
-                  <div>
-                    <label className="text-xs font-bold text-craie/40 uppercase tracking-widest font-mono mb-2 block">
-                      Date
-                    </label>
-                    <input
-                      type="date"
-                      value={selectedDate}
-                      onChange={(e) => setSelectedDate(e.target.value)}
-                      min={new Date().toISOString().slice(0, 10)}
-                      className="border-2 border-encre bg-encre text-craie px-4 py-3 font-mono text-base focus:outline-none focus:border-vert-projecteur w-full md:w-auto"
-                      aria-label="Date de réservation"
-                    />
-                  </div>
-
-                  {/* Slot board */}
-                  <SlotBoard
-                    slots={slots}
-                    selectedTime={selectedTime}
-                    onSelect={handleTimeSelect}
-                  />
-
-                  <div className="flex gap-4 pt-4">
-                    <Button variant="ghost" onClick={() => setStep(0)}>Retour</Button>
-                    <Button
-                      variant="primary"
-                      onClick={goToPayment}
-                      disabled={!selectedTime}
+                  Organiser un match d'abord →
+                </Link>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {plannedMatches.map((m: Match) => {
+                  const selected = selectedMatchId === m.id;
+                  return (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => setSelectedMatchId(m.id)}
+                      className={`text-left p-3.5 border-2 transition-colors cursor-pointer ${
+                        selected
+                          ? "border-vert-projecteur bg-vert-projecteur/15 text-craie shadow-brutal"
+                          : "border-encre/60 bg-nuit-pelouse text-craie/60 hover:text-craie hover:border-craie/40"
+                      }`}
                     >
-                      Continuer →
-                    </Button>
-                  </div>
-                </motion.div>
-              )}
-
-              {/* Step 2: Paiement */}
-              {step === 2 && (
-                <motion.div
-                  key="step-2"
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 20 }}
-                  className="space-y-6"
-                >
-                  <h2 className="font-display font-black text-craie uppercase text-2xl">
-                    3. Paiement
-                  </h2>
-
-                  <form onSubmit={handlePayment} className="space-y-6">
-                    {/* Méthode de paiement */}
-                    <div>
-                      <label className="text-xs font-bold text-craie/40 uppercase tracking-widest font-mono mb-3 block">
-                        Méthode de paiement
-                      </label>
-                      <div className="grid grid-cols-3 gap-3">
-                        {(["CARD", "CASH", "TRANSFER"] as const).map((method) => (
-                          <label key={method} className="cursor-pointer">
-                            <input type="radio" value={method} {...register("paymentMethod")} className="sr-only" />
-                            <div className="border-2 border-encre/40 p-3 text-center font-mono font-bold text-sm uppercase tracking-widest text-craie/60 hover:border-craie transition-colors peer-checked:border-vert-projecteur">
-                              {method === "CARD" ? "💳 Carte" : method === "CASH" ? "💵 Espèces" : "🏦 Virement"}
-                            </div>
-                          </label>
-                        ))}
+                      <div className="font-display font-black text-lg uppercase text-craie">
+                        {m.homeTeamName} vs {m.awayTeamName}
                       </div>
-                    </div>
-
-                    {/* Notes */}
-                    <div>
-                      <label className="text-xs font-bold text-craie/40 uppercase tracking-widest font-mono mb-2 block">
-                        Notes (optionnel)
-                      </label>
-                      <textarea
-                        {...register("notes")}
-                        rows={3}
-                        placeholder="Match entre amis, tournoi…"
-                        className="w-full border-2 border-encre/40 bg-encre/30 text-craie px-4 py-3 font-body text-sm focus:outline-none focus:border-vert-projecteur resize-none placeholder-craie/30"
-                      />
-                    </div>
-
-                    {/* Invite team */}
-                    <div className="border-2 border-jaune-carton bg-jaune-carton/10 p-4">
-                      <div className="font-bold text-jaune-carton uppercase tracking-widest text-sm mb-2 font-mono">
-                        Inviter ton équipe
+                      <div className="font-mono text-xs text-craie/50 mt-1 flex items-center gap-1">
+                        <Calendar size={12} /> {formatDateTime(m.startAt)} · {m.durationMinutes} min
                       </div>
-                      <p className="text-craie/70 text-sm mb-3">Partage ce lien pour que tes coéquipiers puissent rejoindre.</p>
-                      <button
-                        type="button"
-                        onClick={copyInviteLink}
-                        className="flex items-center gap-2 border-2 border-jaune-carton text-jaune-carton px-4 py-2 font-bold text-sm uppercase hover:bg-jaune-carton hover:text-encre transition-colors"
-                      >
-                        {inviteCopied ? <Check size={16} weight="bold" /> : <CopySimple size={16} weight="bold" />}
-                        {inviteCopied ? "Lien copié !" : "Copier le lien"}
-                      </button>
-                    </div>
-
-                    {!isAuthenticated && (
-                      <div className="border-2 border-orange-sifflet bg-orange-sifflet/10 p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-                        <div className="flex items-center gap-3">
-                          <Lock size={24} weight="bold" className="text-orange-sifflet shrink-0" />
-                          <div>
-                            <div className="font-mono font-bold text-sm text-orange-sifflet uppercase">
-                              Connexion requise pour valider
-                            </div>
-                            <div className="text-xs text-craie/70 font-body">
-                              Connectez-vous pour finaliser la réservation et générer votre billet officiel de match.
-                            </div>
-                          </div>
-                        </div>
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          type="button"
-                          onClick={() => router.push(`/auth?redirect=/reserver?fieldId=${selectedFieldId}`)}
-                        >
-                          Se connecter
-                        </Button>
-                      </div>
-                    )}
-
-                    {paymentError && (
-                      <div className="border-2 border-rouge-carton bg-rouge-carton/10 p-4 font-mono text-sm text-rouge-carton uppercase tracking-widest shadow-brutal">
-                        ⚠ {paymentError}
-                      </div>
-                    )}
-
-                    <div className="flex gap-4">
-                      <Button variant="ghost" type="button" onClick={() => setStep(1)}>Retour</Button>
-                      <Button
-                        variant="booking"
-                        size="lg"
-                        type="submit"
-                        loading={bookingMutation.isPending}
-                      >
-                        {isAuthenticated ? "Confirmer la réservation" : "Se connecter et réserver"}
-                      </Button>
-                    </div>
-                  </form>
-                </motion.div>
-              )}
-
-              {/* Success */}
-              {step === 3 && (
-                <motion.div
-                  key="step-3"
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="text-center py-12 space-y-6"
-                >
-                  <div className="font-display font-black text-vert-projecteur text-7xl">✓</div>
-                  <h2 className="font-display font-black text-craie uppercase text-4xl">
-                    Réservation <span className="text-vert-projecteur">confirmée</span> !
-                  </h2>
-                  <p className="text-craie/60">Ton billet a été envoyé par email.</p>
-                  <div className="flex gap-4 justify-center flex-wrap">
-                    <Button variant="primary" onClick={() => router.push("/mes-reservations")}>
-                      Voir mes réservations
-                    </Button>
-                    <Button variant="ghost" onClick={() => router.push("/")}>
-                      Accueil
-                    </Button>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
-          {/* Sticky recap */}
-          {step < 3 && (
-            <div className="lg:col-span-1">
-              <div className="sticky top-20 border-2 border-encre bg-encre shadow-brutal-xl p-6 space-y-4">
-                <div className="font-display font-black text-craie uppercase text-xl border-b-2 border-encre/50 pb-3">
-                  Récapitulatif
-                </div>
+          {/* Étape 2 : Choisir le terrain */}
+          <div className="border-2 border-encre bg-encre p-5 shadow-brutal space-y-3">
+            <div className="flex items-center gap-2 border-b border-encre/60 pb-2">
+              <SoccerBall size={18} weight="bold" className="text-vert-projecteur" />
+              <h2 className="font-mono text-xs font-bold uppercase tracking-wider text-craie">
+                2. Choisir le terrain (Terrains Approuvés)
+              </h2>
+            </div>
 
-                {selectedField ? (
-                  <div className="space-y-3">
-                    <div>
-                      <div className="text-xs font-bold text-craie/40 uppercase tracking-widest font-mono">Terrain</div>
-                      <div className="font-bold text-craie">{selectedField.name}</div>
-                      <div className="text-xs text-craie/50 font-mono">
-                        {selectedField.city} · {formatWorkingHours(selectedField.openTime, selectedField.closeTime)}
+            {loadingFields ? (
+              <p className="font-mono text-xs text-craie/40 animate-pulse">Chargement des terrains…</p>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {fields.map((f: Field) => {
+                  const selected = selectedFieldId === f.id;
+                  return (
+                    <button
+                      key={f.id}
+                      type="button"
+                      onClick={() => setSelectedFieldId(f.id)}
+                      className={`text-left p-3.5 border-2 transition-colors cursor-pointer ${
+                        selected
+                          ? "border-vert-projecteur bg-vert-projecteur/15 text-craie shadow-brutal"
+                          : "border-encre/60 bg-nuit-pelouse text-craie/60 hover:text-craie hover:border-craie/40"
+                      }`}
+                    >
+                      <div className="font-display font-black text-lg uppercase text-craie truncate">
+                        {f.name}
                       </div>
-                    </div>
-                    {selectedDate && (
-                      <div>
-                        <div className="text-xs font-bold text-craie/40 uppercase tracking-widest font-mono">Date</div>
-                        <div className="font-mono text-craie text-sm">{formatDate(selectedDate)}</div>
+                      <div className="font-mono text-xs text-craie/50 flex items-center gap-1 mt-0.5">
+                        <MapPin size={12} /> {f.city} · {f.fieldType}
                       </div>
-                    )}
-                    {selectedTime && (
-                      <div>
-                        <div className="text-xs font-bold text-craie/40 uppercase tracking-widest font-mono">Créneau</div>
-                        <div className="font-mono font-bold text-vert-projecteur text-2xl">{selectedTime}</div>
+                      <div className="font-mono text-xs font-bold text-vert-projecteur mt-2">
+                        {money(f.pricePerHour, f.currency)} / heure
                       </div>
-                    )}
-                    <div className="border-t-2 border-encre/50 pt-3">
-                      <div className="flex justify-between items-center">
-                        <span className="text-craie/60 font-mono text-sm">Total</span>
-                        <span className="font-mono font-black text-2xl text-vert-projecteur">
-                          {formatPrice(totalAmount, selectedField.currency ?? "EUR")}
-                        </span>
-                      </div>
-                    </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Étape 3 : Créneaux à la date du match & récapitulatif */}
+          {selectedMatch && selectedField && (
+            <div className="border-2 border-encre bg-encre p-5 shadow-brutal space-y-4">
+              <div className="flex items-center gap-2 border-b border-encre/60 pb-2">
+                <Clock size={18} weight="bold" className="text-vert-projecteur" />
+                <h2 className="font-mono text-xs font-bold uppercase tracking-wider text-craie">
+                  3. Disponibilité du terrain & Notes
+                </h2>
+              </div>
+
+              <div className="p-3 bg-nuit-pelouse border-2 border-encre text-xs font-mono space-y-1">
+                <div>
+                  <span className="text-craie/50">Horaires d'ouverture :</span>{" "}
+                  <span className="text-craie font-bold">{selectedField.openTime} - {selectedField.closeTime}</span>
+                </div>
+                <div>
+                  <span className="text-craie/50">Créneau du match :</span>{" "}
+                  <span className="text-vert-projecteur font-bold">{formatDateTime(selectedMatch.startAt)} ({selectedMatch.durationMinutes} min)</span>
+                </div>
+                <div>
+                  <span className="text-craie/50">Montant total estimé :</span>{" "}
+                  <span className="text-jaune-carton font-bold">
+                    {money((selectedField.pricePerHour * selectedMatch.durationMinutes) / 60, selectedField.currency)}
+                  </span>
+                </div>
+              </div>
+
+              {slots.length > 0 && (
+                <div className="space-y-1.5">
+                  <span className="font-mono text-[11px] uppercase tracking-wider text-craie/60 block">
+                    Grille horaire du jour ({matchDateStr}) :
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {slots.map((s, idx) => (
+                      <span
+                        key={idx}
+                        className={`font-mono text-[10px] px-2 py-0.5 border ${
+                          s.status === "available"
+                            ? "border-vert-projecteur/40 text-vert-projecteur bg-vert-projecteur/10"
+                            : "border-craie/20 text-craie/30 bg-encre"
+                        }`}
+                      >
+                        {s.time} ({s.status === "available" ? "libre" : "occupé"})
+                      </span>
+                    ))}
                   </div>
-                ) : (
-                  <p className="text-craie/40 text-sm font-mono">Sélectionnez un terrain pour voir le récapitulatif.</p>
-                )}
+                </div>
+              )}
+
+              <div className="space-y-1">
+                <label className="font-mono text-xs uppercase text-craie/60 block">
+                  Remarques ou consignes pour le gérant (optionnel)
+                </label>
+                <textarea
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  rows={2}
+                  placeholder="Ex: besoin de chasubles, ballon fourni…"
+                  className="w-full border-2 border-encre/60 bg-nuit-pelouse text-craie px-3 py-2 text-sm outline-none focus:border-vert-projecteur resize-none"
+                />
+              </div>
+
+              <div className="pt-2">
+                <Button
+                  type="submit"
+                  variant="primary"
+                  loading={bookMut.isPending}
+                  className="w-full sm:w-auto shadow-brutal"
+                >
+                  Envoyer la demande de réservation
+                </Button>
               </div>
             </div>
           )}
-        </div>
+        </form>
       </div>
     </div>
   );
@@ -514,11 +317,12 @@ function BookingContent() {
 
 export const dynamic = "force-dynamic";
 
-export default function ReservationPage() {
+export default function ReserverPage() {
   return (
-    <Suspense>
-      <BookingContent />
-    </Suspense>
+    <ProtectedRoute allowedRoles={["PLAYER"]}>
+      <Suspense>
+        <ReserverContent />
+      </Suspense>
+    </ProtectedRoute>
   );
 }
-

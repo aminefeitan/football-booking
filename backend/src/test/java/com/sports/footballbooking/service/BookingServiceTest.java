@@ -1,13 +1,20 @@
 package com.sports.footballbooking.service;
 
+import com.sports.footballbooking.dto.BookingResponse;
+import com.sports.footballbooking.dto.CreateBookingRequest;
+import com.sports.footballbooking.dto.RejectBookingRequest;
 import com.sports.footballbooking.entity.Booking;
 import com.sports.footballbooking.entity.Field;
-import com.sports.footballbooking.entity.Player;
+import com.sports.footballbooking.entity.Match;
+import com.sports.footballbooking.entity.Team;
 import com.sports.footballbooking.entity.User;
-import com.sports.footballbooking.exception.BusinessException;
 import com.sports.footballbooking.repository.BookingRepository;
 import com.sports.footballbooking.repository.FieldRepository;
+import com.sports.footballbooking.repository.MatchRepository;
 import com.sports.footballbooking.repository.UserRepository;
+import jakarta.ws.rs.ClientErrorException;
+import jakarta.ws.rs.ForbiddenException;
+import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -17,9 +24,11 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.time.LocalTime;
 import java.time.OffsetDateTime;
-import java.util.Collections;
-import java.util.List;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -36,103 +45,169 @@ class BookingServiceTest {
     private FieldRepository fieldRepository;
 
     @Mock
+    private MatchRepository matchRepository;
+
+    @Mock
     private UserRepository userRepository;
 
     @InjectMocks
     private BookingService bookingService;
 
-    private User testUser;
+    private User playerUser;
+    private User managerUser;
+    private User otherManagerUser;
     private Field testField;
-    private UUID userId;
+    private Match testMatch;
+    private UUID playerId;
+    private UUID managerId;
+    private UUID otherManagerId;
     private UUID fieldId;
+    private UUID matchId;
+    private ZoneId zone;
 
     @BeforeEach
-    void setUp() {
-        userId = UUID.randomUUID();
+    void setUp() throws Exception {
+        playerId = UUID.randomUUID();
+        managerId = UUID.randomUUID();
+        otherManagerId = UUID.randomUUID();
         fieldId = UUID.randomUUID();
+        matchId = UUID.randomUUID();
+        zone = ZoneId.of("Africa/Casablanca");
 
-        testUser = new Player("player@example.com", "hashed_pwd", "Karim", "Benzema");
-        testUser.setId(userId);
+        playerUser = new User("player@example.com", "hash", "Karim", "Benzema", "+212600000000", User.Role.PLAYER);
+        setId(playerUser, playerId);
 
-        testField = new Field("Terrain A", "Casablanca", "5v5", new BigDecimal("300.00"));
-        testField.setId(fieldId);
+        managerUser = new User("manager@example.com", "hash", "Gérant", "Principal", "+212611111111", User.Role.FIELD_MANAGER);
+        setId(managerUser, managerId);
+
+        otherManagerUser = new User("other@example.com", "hash", "Autre", "Gérant", "+212622222222", User.Role.FIELD_MANAGER);
+        setId(otherManagerUser, otherManagerId);
+
+        testField = new Field();
+        setId(testField, fieldId);
+        testField.setName("Terrain Anfa");
+        testField.setCity("Casablanca");
+        testField.setAddress("Boulevard d'Anfa");
+        testField.setFieldType("5v5");
+        testField.setPricePerHour(new BigDecimal("300.00"));
+        testField.setOpenTime(LocalTime.of(8, 0));
+        testField.setCloseTime(LocalTime.of(23, 0));
+        testField.setStatus(Field.FieldStatus.APPROVED);
+        testField.setOwner(managerUser);
+
+        Team homeTeam = new Team("Raja", "Club");
+        setId(homeTeam, UUID.randomUUID());
+        Team awayTeam = new Team("Wydad", "Club");
+        setId(awayTeam, UUID.randomUUID());
+
+        ZonedDateTime tomorrow18h = ZonedDateTime.now(zone).plusDays(1).withHour(18).withMinute(0).withSecond(0).withNano(0);
+        testMatch = new Match(playerUser, homeTeam, awayTeam, tomorrow18h.toOffsetDateTime(), 60);
+        setId(testMatch, matchId);
+    }
+
+    private void setId(Object entity, UUID id) throws Exception {
+        java.lang.reflect.Field idField = entity.getClass().getSuperclass().getDeclaredField("id");
+        idField.setAccessible(true);
+        idField.set(entity, id);
     }
 
     @Test
-    @DisplayName("Should create booking when time slot is valid and available")
+    @DisplayName("1. Réservations concurrentes / chevauchement : rejet 409 Conflict")
+    void testConcurrentOrOverlappingBookingRejection() {
+        CreateBookingRequest req = new CreateBookingRequest(matchId, fieldId, "Match officiel");
+
+        when(userRepository.findById(playerId)).thenReturn(Optional.of(playerUser));
+        when(matchRepository.findById(matchId)).thenReturn(Optional.of(testMatch));
+        when(bookingRepository.findActiveByMatch(matchId)).thenReturn(Optional.empty());
+        when(bookingRepository.countPendingByUser(playerId)).thenReturn(0L);
+        when(fieldRepository.findByIdForUpdate(fieldId)).thenReturn(Optional.of(testField));
+        when(bookingRepository.existsOverlapping(eq(fieldId), any(OffsetDateTime.class), any(OffsetDateTime.class))).thenReturn(true);
+
+        ClientErrorException ex = assertThrows(ClientErrorException.class, () ->
+                bookingService.createBooking(playerId, req));
+
+        assertEquals(Response.Status.CONFLICT.getStatusCode(), ex.getResponse().getStatus());
+        assertTrue(ex.getMessage().contains("déjà réservé"));
+        verify(bookingRepository, never()).persist(any(Booking.class));
+    }
+
+    @Test
+    @DisplayName("Création d'une réservation valide avec calcul correct du montant (300 MAD pour 60 min)")
     void testCreateBookingSuccess() {
-        OffsetDateTime start = OffsetDateTime.now().plusDays(1).withHour(18).withMinute(0);
-        OffsetDateTime end = start.plusHours(2);
+        CreateBookingRequest req = new CreateBookingRequest(matchId, fieldId, "Match entre amis");
 
-        var request = new BookingService.CreateBookingRequest(
-                fieldId, start, end, "Match entre amis");
+        when(userRepository.findById(playerId)).thenReturn(Optional.of(playerUser));
+        when(matchRepository.findById(matchId)).thenReturn(Optional.of(testMatch));
+        when(bookingRepository.findActiveByMatch(matchId)).thenReturn(Optional.empty());
+        when(bookingRepository.countPendingByUser(playerId)).thenReturn(0L);
+        when(fieldRepository.findByIdForUpdate(fieldId)).thenReturn(Optional.of(testField));
+        when(bookingRepository.existsOverlapping(eq(fieldId), any(OffsetDateTime.class), any(OffsetDateTime.class))).thenReturn(false);
 
-        when(userRepository.getById(userId)).thenReturn(testUser);
-        when(fieldRepository.getById(fieldId)).thenReturn(testField);
-        when(bookingRepository.findOverlapping(fieldId, start, end)).thenReturn(Collections.emptyList());
+        BookingResponse res = bookingService.createBooking(playerId, req);
 
-        Booking booking = bookingService.createBooking(userId, request);
-
-        assertNotNull(booking);
-        assertEquals(Booking.Status.PENDING_PAYMENT, booking.getStatus());
-        assertEquals(new BigDecimal("600.00"), booking.getTotalAmount());
-        verify(bookingRepository, times(1)).save(any(Booking.class));
+        assertNotNull(res);
+        assertEquals(Booking.BookingStatus.PENDING, res.status());
+        assertEquals(new BigDecimal("300.00"), res.totalAmount());
+        assertEquals("MAD", res.currency());
+        verify(bookingRepository, times(1)).persist(any(Booking.class));
     }
 
     @Test
-    @DisplayName("Should reject booking if requested duration exceeds max limit (4 hours)")
-    void testRejectBookingDurationTooLong() {
-        OffsetDateTime start = OffsetDateTime.now().plusDays(1).withHour(14).withMinute(0);
-        OffsetDateTime end = start.plusHours(5);
+    @DisplayName("7. Réserver terrain PENDING ou REJECTED -> rejet 409 Conflict")
+    void testBookPendingOrRejectedFieldThrows409() {
+        testField.setStatus(Field.FieldStatus.PENDING);
+        CreateBookingRequest req = new CreateBookingRequest(matchId, fieldId, null);
 
-        var request = new BookingService.CreateBookingRequest(fieldId, start, end);
+        when(userRepository.findById(playerId)).thenReturn(Optional.of(playerUser));
+        when(matchRepository.findById(matchId)).thenReturn(Optional.of(testMatch));
+        when(bookingRepository.findActiveByMatch(matchId)).thenReturn(Optional.empty());
+        when(bookingRepository.countPendingByUser(playerId)).thenReturn(0L);
+        when(fieldRepository.findByIdForUpdate(fieldId)).thenReturn(Optional.of(testField));
 
-        when(userRepository.getById(userId)).thenReturn(testUser);
-        when(fieldRepository.getById(fieldId)).thenReturn(testField);
-
-        BusinessException exception = assertThrows(BusinessException.class, () ->
-                bookingService.createBooking(userId, request));
-
-        assertTrue(exception.getMessage().contains("Durée maximale"));
+        ClientErrorException ex = assertThrows(ClientErrorException.class, () ->
+                bookingService.createBooking(playerId, req));
+        assertEquals(Response.Status.CONFLICT.getStatusCode(), ex.getResponse().getStatus());
+        assertTrue(ex.getMessage().contains("pas approuvé"));
     }
 
     @Test
-    @DisplayName("Should reject booking if timeslot overlaps an existing booking")
-    void testRejectOverlappingBooking() {
-        OffsetDateTime start = OffsetDateTime.now().plusDays(1).withHour(18).withMinute(0);
-        OffsetDateTime end = start.plusHours(1);
+    @DisplayName("7. Non-créateur du match qui tente de réserver -> 403 Forbidden")
+    void testNonCreatorCannotBook() {
+        UUID nonCreatorId = UUID.randomUUID();
+        User nonCreator = new User("other@player.com", "hash", "Other", "Player", null, User.Role.PLAYER);
+        CreateBookingRequest req = new CreateBookingRequest(matchId, fieldId, null);
 
-        var request = new BookingService.CreateBookingRequest(fieldId, start, end);
+        when(userRepository.findById(nonCreatorId)).thenReturn(Optional.of(nonCreator));
+        when(matchRepository.findById(matchId)).thenReturn(Optional.of(testMatch));
 
-        Booking existing = new Booking(testUser, testField, start, end, new BigDecimal("300.00"));
-
-        when(userRepository.getById(userId)).thenReturn(testUser);
-        when(fieldRepository.getById(fieldId)).thenReturn(testField);
-        when(bookingRepository.findOverlapping(fieldId, start, end)).thenReturn(List.of(existing));
-
-        BusinessException exception = assertThrows(BusinessException.class, () ->
-                bookingService.createBooking(userId, request));
-
-        assertTrue(exception.getMessage().contains("déjà réservé"));
+        ForbiddenException ex = assertThrows(ForbiddenException.class, () ->
+                bookingService.createBooking(nonCreatorId, req));
+        assertTrue(ex.getMessage().contains("Seul le créateur du match"));
     }
 
     @Test
-    @DisplayName("Should confirm booking status upon payment")
-    void testConfirmBooking() {
+    @DisplayName("8. Gérant ne peut confirmer/refuser QUE les réservations de son propre terrain")
+    void testManagerCanOnlyHandleOwnTerrainBookings() throws Exception {
         UUID bookingId = UUID.randomUUID();
-        OffsetDateTime start = OffsetDateTime.now().plusDays(1).withHour(18).withMinute(0);
-        OffsetDateTime end = start.plusHours(1);
+        Booking booking = new Booking(testMatch, playerUser, testField, testMatch.getStartAt(), testMatch.getStartAt().plusHours(1), new BigDecimal("300.00"), null);
+        setId(booking, bookingId);
 
-        Booking booking = new Booking(testUser, testField, start, end, new BigDecimal("300.00"));
-        booking.setId(bookingId);
+        when(bookingRepository.findById(bookingId)).thenReturn(Optional.of(booking));
 
-        when(bookingRepository.getById(bookingId)).thenReturn(booking);
-        when(bookingRepository.save(any(Booking.class))).thenAnswer(i -> i.getArgument(0));
+        // otherManager attempts to confirm -> 403
+        ForbiddenException ex1 = assertThrows(ForbiddenException.class, () ->
+                bookingService.confirmBooking(bookingId, otherManagerId, false));
+        assertTrue(ex1.getMessage().contains("Seul le gérant"));
 
-        Booking confirmed = bookingService.confirmBooking(bookingId);
+        // otherManager attempts to reject -> 403
+        RejectBookingRequest rejectReq = new RejectBookingRequest("Terrain indisponible");
+        ForbiddenException ex2 = assertThrows(ForbiddenException.class, () ->
+                bookingService.rejectBooking(bookingId, otherManagerId, false, rejectReq));
+        assertTrue(ex2.getMessage().contains("Seul le gérant"));
 
-        assertEquals(Booking.Status.CONFIRMED, confirmed.getStatus());
-        assertNull(confirmed.getExpiresAt());
-        verify(bookingRepository, times(1)).save(booking);
+        // Owner can confirm successfully
+        when(userRepository.findById(managerId)).thenReturn(Optional.of(managerUser));
+        BookingResponse confirmed = bookingService.confirmBooking(bookingId, managerId, false);
+        assertEquals(Booking.BookingStatus.CONFIRMED, confirmed.status());
     }
 }

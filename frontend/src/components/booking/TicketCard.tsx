@@ -1,6 +1,6 @@
 "use client";
 
-import { formatDate, formatTime, formatPrice, formatFieldType } from "@/lib/utils";
+import { formatDate, formatTime, formatPrice } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import type { Booking } from "@/lib/types";
 
@@ -58,11 +58,10 @@ function Perforations({ count = 12 }: { count?: number }) {
 }
 
 export function TicketCard({ booking, className }: TicketCardProps) {
-  const field = booking.field;
   const statusColor =
     booking.status === "CONFIRMED"
       ? "text-vert-projecteur"
-      : booking.status === "PENDING_PAYMENT"
+      : booking.status === "PENDING"
       ? "text-jaune-carton"
       : booking.status === "CANCELLED"
       ? "text-red-400"
@@ -83,11 +82,10 @@ export function TicketCard({ booking, className }: TicketCardProps) {
             FootBook
           </div>
           <div className="font-display text-2xl font-black text-craie uppercase leading-none">
-            {field?.name ?? "Terrain"}
+            {booking.fieldName ?? "Terrain"}
           </div>
           <div className="font-mono text-sm text-craie/60 mt-1">
-            {field ? formatFieldType(field.fieldType) : ""}
-            {field?.city ? ` · ${field.city}` : ""}
+            Réservation FootBook
           </div>
         </div>
         <div className="text-right">

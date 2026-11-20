@@ -1,22 +1,26 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <persistence xmlns="https://jakarta.ee/xml/ns/jakartaee"
              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-             xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee https://jakarta.ee/xml/ns/jakartaee/persistence_3_2.xsd"
-             version="3.2">
+             xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee https://jakarta.ee/xml/ns/jakartaee/persistence_3_1.xsd"
+             version="3.1">
 
     <persistence-unit name="footballBookingPU" transaction-type="JTA">
         <jta-data-source>java:jboss/datasources/FootballBookingDS</jta-data-source>
 
+        <class>com.sports.footballbooking.entity.BaseEntity</class>
+        <class>com.sports.footballbooking.entity.User</class>
+        <class>com.sports.footballbooking.entity.Field</class>
+        <class>com.sports.footballbooking.entity.Team</class>
+        <class>com.sports.footballbooking.entity.TeamMember</class>
+        <class>com.sports.footballbooking.entity.TeamInvitation</class>
+        <class>com.sports.footballbooking.entity.Match</class>
+        <class>com.sports.footballbooking.entity.Booking</class>
+
         <properties>
-            <!-- Schema managed by Flyway -->
             <property name="hibernate.hbm2ddl.auto" value="none"/>
-
-            <!-- SQL logging -->
-            <property name="hibernate.show_sql" value="true"/>
-            <property name="hibernate.format_sql" value="true"/>
-
-            <!-- Timezone handling -->
-            <property name="hibernate.jdbc.time_zone" value="UTC"/>
+            <property name="hibernate.show_sql" value="false"/>
+            <property name="hibernate.jdbc.time_zone" value="Africa/Casablanca"/>
+            <property name="hibernate.jpa.compliance.query" value="false"/>
         </properties>
     </persistence-unit>
 </persistence>

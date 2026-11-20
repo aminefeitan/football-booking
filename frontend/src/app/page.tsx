@@ -21,24 +21,23 @@ import { getFields } from "@/services/fields.service";
 
 const FIELD_TYPES = [
   { value: "", label: "Tous formats" },
-  { value: "FIVE_ASIDE", label: "5 vs 5" },
-  { value: "SEVEN_ASIDE", label: "7 vs 7" },
-  { value: "ELEVEN_ASIDE", label: "11 vs 11" },
+  { value: "5v5", label: "5 vs 5" },
+  { value: "7v7", label: "7 vs 7" },
+  { value: "11v11", label: "11 vs 11" },
 ];
 
 const MARQUEE_ITEMS = [
-  "Terrain du Parc libre ce soir 21h",
-  "-20% tous les mardis soirs",
-  "Nouveau complexe indoor à Lyon disponible",
-  "Paiement sur place ou par carte",
+  "Terrains synthétiques et naturels homologués",
+  "Casablanca · Rabat · Marrakech · Tanger",
+  "Paiement sur place auprès du gérant",
   "Foot à 5 · Foot à 7 · Foot à 11",
-  "Confirmation immédiate avec billet digital",
+  "Création d'équipes et défis de matchs",
 ];
 
 const QUICK_TAGS = [
-  { label: "Foot à 5", type: "FIVE_ASIDE" },
-  { label: "Foot à 7", type: "SEVEN_ASIDE" },
-  { label: "Foot à 11", type: "ELEVEN_ASIDE" },
+  { label: "Foot à 5", type: "5v5" },
+  { label: "Foot à 7", type: "7v7" },
+  { label: "Foot à 11", type: "11v11" },
   { label: "Indoor 🏠", indoor: true },
 ];
 

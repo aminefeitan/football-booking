@@ -4,10 +4,6 @@ import jakarta.persistence.*;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
-/**
- * Base mapped superclass providing standard identification and audit timestamps
- * for all entities in the application.
- */
 @MappedSuperclass
 public abstract class BaseEntity {
 
@@ -21,6 +17,10 @@ public abstract class BaseEntity {
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt;
 
+    @Version
+    @Column(nullable = false)
+    private long version;
+
     @PrePersist
     protected void onCreate() {
         OffsetDateTime now = OffsetDateTime.now();
@@ -33,29 +33,19 @@ public abstract class BaseEntity {
         this.updatedAt = OffsetDateTime.now();
     }
 
-    // ==================== Getters & Setters ====================
-
     public UUID getId() {
         return id;
-    }
-
-    public void setId(UUID id) {
-        this.id = id;
     }
 
     public OffsetDateTime getCreatedAt() {
         return createdAt;
     }
 
-    public void setCreatedAt(OffsetDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
-
     public OffsetDateTime getUpdatedAt() {
         return updatedAt;
     }
 
-    public void setUpdatedAt(OffsetDateTime updatedAt) {
-        this.updatedAt = updatedAt;
+    public long getVersion() {
+        return version;
     }
 }

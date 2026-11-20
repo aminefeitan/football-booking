@@ -1,20 +1,18 @@
 package com.sports.footballbooking.resource;
 
-import com.sports.footballbooking.config.Authenticated;
-import com.sports.footballbooking.config.SecurityUtils;
-import com.sports.footballbooking.entity.User;
+import com.sports.footballbooking.dto.AuthResponse;
+import com.sports.footballbooking.dto.LoginRequest;
+import com.sports.footballbooking.dto.RegisterRequest;
 import com.sports.footballbooking.service.AuthService;
+import jakarta.enterprise.context.RequestScoped;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
-import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import jakarta.ws.rs.core.SecurityContext;
-
-import java.util.UUID;
 
 @Path("/auth")
+@RequestScoped
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class AuthResource {
@@ -24,24 +22,15 @@ public class AuthResource {
 
     @POST
     @Path("/register")
-    public Response register(@Valid AuthService.RegisterRequest request) {
-        AuthService.AuthResponse response = authService.register(request);
-        return Response.status(Response.Status.CREATED).entity(response).build();
+    public Response register(@Valid RegisterRequest req) {
+        AuthResponse res = authService.register(req);
+        return Response.status(Response.Status.CREATED).entity(res).build();
     }
 
     @POST
     @Path("/login")
-    public Response login(@Valid AuthService.LoginRequest request) {
-        AuthService.AuthResponse response = authService.login(request);
-        return Response.ok(response).build();
-    }
-
-    @GET
-    @Path("/me")
-    @Authenticated
-    public Response getCurrentUser(@Context SecurityContext sec) {
-        UUID userId = SecurityUtils.getUserId(sec);
-        User user = authService.getUserById(userId);
-        return Response.ok(user).build();
+    public Response login(@Valid LoginRequest req) {
+        AuthResponse res = authService.login(req);
+        return Response.ok(res).build();
     }
 }

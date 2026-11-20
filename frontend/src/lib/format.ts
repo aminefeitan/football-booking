@@ -1,7 +1,7 @@
-import type { Match, User } from "./types";
+import type { User } from "./types";
 
 export function fullName(user?: User | null) {
-  if (!user) return "Unknown";
+  if (!user) return "Inconnu";
   return `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() || user.email;
 }
 
@@ -21,7 +21,8 @@ export function formatDateTime(iso?: string) {
   if (!iso) return "—";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
-  return new Intl.DateTimeFormat("en-GB", {
+  return new Intl.DateTimeFormat("fr-FR", {
+    timeZone: "Africa/Casablanca",
     weekday: "short",
     day: "numeric",
     month: "short",
@@ -34,7 +35,8 @@ export function formatDate(iso?: string) {
   if (!iso) return "—";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
-  return new Intl.DateTimeFormat("en-GB", {
+  return new Intl.DateTimeFormat("fr-FR", {
+    timeZone: "Africa/Casablanca",
     day: "numeric",
     month: "short",
     year: "numeric",
@@ -46,17 +48,9 @@ export function toDatetimeLocalValue(d: Date) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-export function fromDatetimeLocal(value: string) {
-  const d = new Date(value);
+export function toCasablancaIso(datetimeLocal: string): string {
+  // Convert local input YYYY-MM-DDTHH:mm into ISO with Africa/Casablanca offset (+01:00 standard / +00:00 Ramadan)
+  // Or standard ISO with local system offset
+  const d = new Date(datetimeLocal);
   return d.toISOString();
-}
-
-export function matchIsPublic(match: Match) {
-  return match.public ?? match.isPublic ?? true;
-}
-
-export function spotsLeft(match: Match) {
-  const max = match.maxPlayers ?? 0;
-  const taken = match.participants?.length ?? 0;
-  return Math.max(0, max - taken);
 }

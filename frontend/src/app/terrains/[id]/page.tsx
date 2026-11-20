@@ -28,8 +28,8 @@ export default function TerrainDetailPage({ params }: Props) {
   );
 
   const { data: slots = [] } = useQuery({
-    queryKey: ["field-slots", id, selectedDate, field?.openTime, field?.closeTime],
-    queryFn: () => getFieldSlots(id, selectedDate, field),
+    queryKey: ["field-slots", id, selectedDate],
+    queryFn: () => getFieldSlots(id, selectedDate),
     enabled: !!field,
   });
 
@@ -96,7 +96,7 @@ export default function TerrainDetailPage({ params }: Props) {
               <div className="flex flex-col gap-1">
                 <div className="flex items-center gap-1.5 text-craie/50 text-xs font-mono">
                   <MapPin size={12} weight="bold" />
-                  {field.address}, {field.city} {field.postalCode}
+                  {field.address}, {field.city}
                 </div>
                 {field.phone && (
                   <div className="flex items-center gap-1.5 text-craie/50 text-xs font-mono">
