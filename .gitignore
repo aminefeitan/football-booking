@@ -4,6 +4,10 @@
 microprofile-config.properties
 **/microprofile-config.properties
 !microprofile-config.properties.example
+*.env
+*.env.*
+*.env.local
+setup-db.bat
 standalone.conf
 
 # ==============================================================================
