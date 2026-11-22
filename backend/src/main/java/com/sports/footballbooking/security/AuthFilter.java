@@ -1,10 +1,11 @@
 package com.sports.footballbooking.security;
 
 import com.sports.footballbooking.entity.User;
-import com.sports.footballbooking.service.AuthService;
+import com.sports.footballbooking.repository.UserRepository;
 import jakarta.annotation.Priority;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import jakarta.ws.rs.ForbiddenException;
 import jakarta.ws.rs.NotAuthorizedException;
 import jakarta.ws.rs.Priorities;
 import jakarta.ws.rs.container.ContainerRequestContext;
@@ -24,10 +25,10 @@ import java.util.UUID;
 public class AuthFilter implements ContainerRequestFilter {
 
     @Inject
-    private AuthService authService;
+    private JwtService jwtService;
 
     @Inject
-    private JwtService jwtService;
+    private UserRepository userRepository;
 
     @Override
     public void filter(ContainerRequestContext requestContext) throws IOException {
@@ -48,32 +49,35 @@ public class AuthFilter implements ContainerRequestFilter {
             throw new NotAuthorizedException("Bearer");
         }
 
-        Optional<JwtService.UserPrincipalData> principalDataOpt = jwtService.parseToken(token);
-        if (principalDataOpt.isEmpty()) {
+        Optional<UUID> userIdOpt = jwtService.validate(token);
+        if (userIdOpt.isEmpty()) {
             throw new NotAuthorizedException("Bearer");
         }
 
-        JwtService.UserPrincipalData principalData = principalDataOpt.get();
-        final UUID userId = principalData.userId();
-        final String roleName;
-        final String statusName;
+        UUID userId = userIdOpt.get();
 
-        // Fast path: if claims are present in token, authenticate completely in-memory with 0 database queries!
-        if (principalData.role() != null && principalData.status() != null) {
-            roleName = principalData.role();
-            statusName = principalData.status();
-            if (!"ACTIVE".equalsIgnoreCase(statusName)) {
-                throw new jakarta.ws.rs.ForbiddenException("Ce compte est " + statusName.toLowerCase());
+        // Rôle et statut relus en base à chaque requête
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new NotAuthorizedException("Bearer"));
+
+        if (user.getStatus() != User.Status.ACTIVE) {
+            throw new ForbiddenException("Ce compte est " + user.getStatus().name().toLowerCase());
+        }
+
+        // Forced password change verification
+        if (user.isMustChangePassword()) {
+            String normalized = normalizePath(path);
+            boolean isGetMe = "GET".equalsIgnoreCase(method) && "users/me".equalsIgnoreCase(normalized);
+            boolean isPutPassword = "PUT".equalsIgnoreCase(method) && "users/me/password".equalsIgnoreCase(normalized);
+            if (!isGetMe && !isPutPassword) {
+                throw new ForbiddenException("Password change required");
             }
-        } else {
-            // Fallback for legacy tokens without claims: query database
-            User user = authService.authenticate(token);
-            roleName = user.getRole() != null ? user.getRole().name() : null;
-            statusName = user.getStatus() != null ? user.getStatus().name() : null;
         }
 
         SecurityContext originalContext = requestContext.getSecurityContext();
         boolean isSecure = originalContext != null && originalContext.isSecure();
+
+        final String roleName = user.getRole().name();
 
         requestContext.setSecurityContext(new SecurityContext() {
             @Override
@@ -83,7 +87,7 @@ public class AuthFilter implements ContainerRequestFilter {
 
             @Override
             public boolean isUserInRole(String role) {
-                return roleName != null && roleName.equalsIgnoreCase(role);
+                return roleName.equalsIgnoreCase(role);
             }
 
             @Override
@@ -102,6 +106,14 @@ public class AuthFilter implements ContainerRequestFilter {
         if ("OPTIONS".equalsIgnoreCase(method)) {
             return true;
         }
+        String normalized = normalizePath(path);
+        if ("POST".equalsIgnoreCase(method)) {
+            return "auth/login".equalsIgnoreCase(normalized) || "auth/register".equalsIgnoreCase(normalized);
+        }
+        return false;
+    }
+
+    private String normalizePath(String path) {
         String normalized = path == null ? "" : path.trim();
         if (normalized.startsWith("/")) {
             normalized = normalized.substring(1);
@@ -109,24 +121,6 @@ public class AuthFilter implements ContainerRequestFilter {
         if (normalized.startsWith("api/v1/")) {
             normalized = normalized.substring(7);
         }
-
-        if ("POST".equalsIgnoreCase(method)) {
-            return "auth/login".equalsIgnoreCase(normalized) || "auth/register".equalsIgnoreCase(normalized);
-        }
-        if ("GET".equalsIgnoreCase(method)) {
-            if ("fields".equalsIgnoreCase(normalized) || "fields/".equalsIgnoreCase(normalized)) {
-                return true;
-            }
-            if ("fields/mine".equalsIgnoreCase(normalized)) {
-                return false;
-            }
-            if (normalized.matches("(?i)^fields/[0-9a-fA-F\\-]+$")) {
-                return true;
-            }
-            if (normalized.matches("(?i)^fields/[0-9a-fA-F\\-]+/slots.*$")) {
-                return true;
-            }
-        }
-        return false;
+        return normalized;
     }
 }

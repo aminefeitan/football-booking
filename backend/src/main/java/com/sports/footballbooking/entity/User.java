@@ -42,6 +42,9 @@ public class User extends BaseEntity {
     @Column(nullable = false, length = 20)
     private Status status = Status.ACTIVE;
 
+    @Column(name = "must_change_password", nullable = false)
+    private boolean mustChangePassword = false;
+
     protected User() {
     }
 
@@ -109,5 +112,13 @@ public class User extends BaseEntity {
 
     public void setStatus(Status status) {
         this.status = status;
+    }
+
+    public boolean isMustChangePassword() {
+        return mustChangePassword;
+    }
+
+    public void setMustChangePassword(boolean mustChangePassword) {
+        this.mustChangePassword = mustChangePassword;
     }
 }

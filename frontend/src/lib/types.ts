@@ -14,6 +14,7 @@ export interface User {
   phone?: string;
   role: Role;
   status: UserStatus;
+  mustChangePassword?: boolean;
   createdAt?: string;
 }
 
@@ -45,8 +46,21 @@ export interface Field {
   openTime: string;
   closeTime: string;
   status: FieldStatus;
+  photoUrl?: string | null;
   reviewedById?: string;
   createdAt?: string;
+}
+
+export interface CreateFieldManagerRequest {
+  email: string;
+  firstName: string;
+  lastName: string;
+  phone?: string;
+}
+
+export interface CreatedUserResponse {
+  user: User;
+  temporaryPassword: string;
 }
 
 export interface SlotStatus {

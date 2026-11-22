@@ -12,6 +12,7 @@ public record UserResponse(
         String phone,
         User.Role role,
         User.Status status,
+        boolean mustChangePassword,
         OffsetDateTime createdAt
 ) {
     public static UserResponse from(User user) {
@@ -24,6 +25,7 @@ public record UserResponse(
                 user.getPhone(),
                 user.getRole(),
                 user.getStatus(),
+                user.isMustChangePassword(),
                 user.getCreatedAt()
         );
     }

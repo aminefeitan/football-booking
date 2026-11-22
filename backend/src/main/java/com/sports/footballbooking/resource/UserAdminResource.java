@@ -1,8 +1,10 @@
 package com.sports.footballbooking.resource;
 
-import com.sports.footballbooking.dto.UpdateUserRoleRequest;
+import com.sports.footballbooking.dto.CreateFieldManagerRequest;
+import com.sports.footballbooking.dto.CreatedUserResponse;
 import com.sports.footballbooking.dto.UpdateUserStatusRequest;
 import com.sports.footballbooking.dto.UserResponse;
+import com.sports.footballbooking.entity.User;
 import com.sports.footballbooking.service.UserService;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.RequestScoped;
@@ -11,6 +13,7 @@ import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.SecurityContext;
 
 import java.util.List;
@@ -27,8 +30,28 @@ public class UserAdminResource {
     private UserService userService;
 
     @GET
-    public List<UserResponse> listUsers() {
-        return userService.listUsers();
+    public List<UserResponse> listUsers(@QueryParam("role") User.Role role) {
+        return userService.listUsers(role);
+    }
+
+    @POST
+    @Path("/field-managers")
+    public Response createFieldManager(@Valid CreateFieldManagerRequest req) {
+        CreatedUserResponse res = userService.createFieldManager(req);
+        return Response.status(Response.Status.CREATED)
+                .entity(res)
+                .header("Cache-Control", "no-store")
+                .build();
+    }
+
+    @POST
+    @Path("/{id}/reset-password")
+    public Response resetPassword(@Context SecurityContext sec, @PathParam("id") UUID id) {
+        UUID adminId = UUID.fromString(sec.getUserPrincipal().getName());
+        CreatedUserResponse res = userService.resetPassword(adminId, id);
+        return Response.ok(res)
+                .header("Cache-Control", "no-store")
+                .build();
     }
 
     @PATCH
@@ -36,12 +59,5 @@ public class UserAdminResource {
     public UserResponse updateStatus(@Context SecurityContext sec, @PathParam("id") UUID id, @Valid UpdateUserStatusRequest req) {
         UUID adminId = UUID.fromString(sec.getUserPrincipal().getName());
         return userService.updateUserStatus(adminId, id, req.status());
-    }
-
-    @PATCH
-    @Path("/{id}/role")
-    public UserResponse updateRole(@Context SecurityContext sec, @PathParam("id") UUID id, @Valid UpdateUserRoleRequest req) {
-        UUID adminId = UUID.fromString(sec.getUserPrincipal().getName());
-        return userService.updateUserRole(adminId, id, req.role());
     }
 }

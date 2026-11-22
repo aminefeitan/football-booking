@@ -16,12 +16,22 @@ import {
   MapPin,
   Clock,
   Money,
+  Camera,
+  Trash,
 } from "@phosphor-icons/react";
 import { useAuth, ProtectedRoute } from "@/context/AuthContext";
-import { getMyFields, createField, updateField, getFieldSlots } from "@/services/fields.service";
+import {
+  getMyFields,
+  createField,
+  updateField,
+  getFieldSlots,
+  uploadFieldPhoto,
+  deleteFieldPhoto,
+} from "@/services/fields.service";
 import { getManagerBookings, confirmBooking, rejectBooking, cancelBooking } from "@/services/bookings.service";
 import { getManagerStats } from "@/services/stats.service";
 import { Button } from "@/components/ui/Button";
+import { FieldPhoto } from "@/components/ui/FieldPhoto";
 import { formatDateTime, formatDate, money } from "@/lib/format";
 import type { Field, Booking, BookingStatus, FieldStatus } from "@/lib/types";
 import { MOROCCAN_CITIES } from "@/lib/constants";
@@ -52,6 +62,9 @@ function DashboardContent() {
   const [hasLights, setHasLights] = useState(false);
   const [hasLockerRoom, setHasLockerRoom] = useState(false);
   const [hasParking, setHasParking] = useState(false);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [currentPhotoUrl, setCurrentPhotoUrl] = useState<string | null>(null);
+  const [photoError, setPhotoError] = useState<string | null>(null);
 
   // Booking filters & reject modal
   const [bookingStatusFilter, setBookingStatusFilter] = useState<BookingStatus | "ALL">("ALL");
@@ -112,11 +125,16 @@ function DashboardContent() {
         hasLockerRoom,
         hasParking,
       };
+      let savedField: Field;
       if (editingFieldId) {
-        return updateField(editingFieldId, payload);
+        savedField = await updateField(editingFieldId, payload);
       } else {
-        return createField(payload);
+        savedField = await createField(payload);
       }
+      if (photoFile) {
+        await uploadFieldPhoto(savedField.id, photoFile);
+      }
+      return savedField;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["my-fields"] });
@@ -126,6 +144,19 @@ function DashboardContent() {
     },
     onError: (err: unknown) => {
       const msg = err instanceof Error ? err.message : "Erreur enregistrement terrain";
+      setFeedback({ text: msg, error: true });
+    },
+  });
+
+  const deletePhotoMut = useMutation({
+    mutationFn: (fieldId: string) => deleteFieldPhoto(fieldId),
+    onSuccess: () => {
+      setCurrentPhotoUrl(null);
+      qc.invalidateQueries({ queryKey: ["my-fields"] });
+      setFeedback({ text: "Photo supprimée avec succès !" });
+    },
+    onError: (err: unknown) => {
+      const msg = err instanceof Error ? err.message : "Erreur suppression photo";
       setFeedback({ text: msg, error: true });
     },
   });
@@ -190,6 +221,9 @@ function DashboardContent() {
     setHasLights(f.hasLights);
     setHasLockerRoom(f.hasLockerRoom);
     setHasParking(f.hasParking);
+    setCurrentPhotoUrl(f.photoUrl ?? null);
+    setPhotoFile(null);
+    setPhotoError(null);
     setShowFieldModal(true);
   };
 
@@ -210,6 +244,9 @@ function DashboardContent() {
     setHasLights(false);
     setHasLockerRoom(false);
     setHasParking(false);
+    setCurrentPhotoUrl(null);
+    setPhotoFile(null);
+    setPhotoError(null);
   };
 
   const getStatusBadge = (status: FieldStatus) => {
@@ -366,6 +403,11 @@ function DashboardContent() {
                     className="border-2 border-encre bg-encre shadow-brutal p-5 flex flex-col justify-between space-y-4 hover:border-orange-sifflet transition-colors"
                   >
                     <div>
+                      {f.photoUrl && (
+                        <div className="h-36 w-full mb-3 overflow-hidden border border-encre">
+                          <FieldPhoto photoUrl={f.photoUrl} alt={f.name} className="w-full h-full object-cover" />
+                        </div>
+                      )}
                       <div className="flex items-center justify-between gap-2 mb-2">
                         {getStatusBadge(f.status)}
                         <span className="font-mono text-xs text-craie/50">{f.fieldType}</span>
@@ -744,6 +786,68 @@ function DashboardContent() {
                     rows={2}
                     className="w-full border-2 border-encre/60 bg-nuit-pelouse text-craie px-3 py-2 text-sm outline-none focus:border-orange-sifflet resize-none"
                   />
+                </div>
+
+                {/* Photo du terrain */}
+                <div className="space-y-1.5 border-t border-encre/60 pt-3">
+                  <label className="font-mono text-xs uppercase text-craie/60 flex items-center gap-1.5">
+                    <Camera size={14} weight="bold" />
+                    Photo du terrain (JPEG, PNG, WebP · max 2 Mo)
+                  </label>
+                  {currentPhotoUrl && (
+                    <div className="flex items-center gap-3 p-2 bg-nuit-pelouse border border-encre">
+                      <div className="h-16 w-24 overflow-hidden border border-encre shrink-0">
+                        <FieldPhoto photoUrl={currentPhotoUrl} alt="Photo actuelle" className="w-full h-full object-cover" />
+                      </div>
+                      <div className="flex-1 text-xs font-mono text-craie/60">Photo actuelle</div>
+                      {editingFieldId && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          type="button"
+                          onClick={() => deletePhotoMut.mutate(editingFieldId)}
+                          loading={deletePhotoMut.isPending}
+                          className="text-orange-sifflet hover:bg-orange-sifflet/10 text-xs"
+                        >
+                          <Trash size={14} /> Supprimer
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) {
+                        setPhotoFile(null);
+                        setPhotoError(null);
+                        return;
+                      }
+                      const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+                      if (!allowedTypes.includes(file.type)) {
+                        setPhotoError("Format invalide. Seuls JPEG, PNG et WebP sont acceptés.");
+                        setPhotoFile(null);
+                        return;
+                      }
+                      if (file.size > 2 * 1024 * 1024) {
+                        setPhotoError("Image trop volumineuse. Taille maximum : 2 Mo.");
+                        setPhotoFile(null);
+                        return;
+                      }
+                      setPhotoError(null);
+                      setPhotoFile(file);
+                    }}
+                    className="w-full border-2 border-encre/60 bg-nuit-pelouse text-craie px-3 py-1.5 text-xs font-mono outline-none focus:border-orange-sifflet file:mr-2 file:py-1 file:px-2 file:border-0 file:bg-orange-sifflet file:text-craie file:font-mono file:text-xs file:cursor-pointer"
+                  />
+                  {photoError && (
+                    <p className="text-orange-sifflet text-xs font-mono">{photoError}</p>
+                  )}
+                  {photoFile && (
+                    <p className="text-vert-projecteur text-xs font-mono">
+                      ✓ Fichier sélectionné : {photoFile.name} ({(photoFile.size / 1024).toFixed(1)} Ko)
+                    </p>
+                  )}
                 </div>
 
                 <div className="flex justify-end gap-2 pt-2">

@@ -211,10 +211,12 @@ CANCELLED CANCELLED
 
 ### 👤 Module Administration (Utilisateurs)
 
-| Fonctionnalité | Description | Rôle |
-|----------------|-------------|------|
-| Consulter un utilisateur | Voir les détails d'un utilisateur par ID | Admin |
-| Lister par rôle | Filtrer les utilisateurs par rôle (PLAYER, FIELD_MANAGER, ADMIN) | Admin |
+| Fonctionnalité | Description | Endpoint | Rôle |
+|----------------|-------------|----------|------|
+| Créer un gérant de terrain | Créer un compte FIELD_MANAGER avec mot de passe temporaire unique | `POST /admin/users/field-managers` | Admin |
+| Réinitialiser mot de passe | Générer un nouveau mot de passe temporaire pour un utilisateur (sauf admin) | `POST /admin/users/{id}/reset-password` | Admin |
+| Changer statut utilisateur | Activer, suspendre ou bannir (sauf soi-même et admins) | `PATCH /admin/users/{id}/status` | Admin |
+| Lister les utilisateurs | Filtrer les utilisateurs par rôle ou récupérer tous les comptes | `GET /admin/users` | Admin |
 
 ---
 
@@ -758,6 +760,26 @@ Initialiser le schéma complet directement avec le script unifié :
 psql -U football_user -d football_booking -f schema.sql
 ```
 *(Alternativement, Flyway exécutera automatiquement la migration équivalente `V1__schema.sql` lors du démarrage de l'application).*
+
+### Variables d'Environnement
+
+L'application backend est configurée sans aucun secret codé en dur, via des variables d'environnement lues par MicroProfile Config :
+
+| Variable d'Environnement | Description | Obligatoire ? | Exemple |
+|--------------------------|-------------|---------------|---------|
+| `JWT_SECRET` | Clé secrète de signature HMAC256 (32+ caractères) | Oui | `a-very-long-secret-key-with-at-least-32-chars!` |
+| `DB_USER` | Utilisateur PostgreSQL | Oui | `football_user` |
+| `DB_PASSWORD` | Mot de passe PostgreSQL | Oui | `your_db_password` |
+| `DB_URL` | URL JDBC PostgreSQL | Optionnel (défaut `jdbc:postgresql://localhost:5432/football_booking`) | `jdbc:postgresql://localhost:5432/football_booking` |
+| `ADMIN_EMAIL` | Email de l'administrateur initial créé automatiquement | Oui au 1er démarrage | `admin@footbook.com` |
+| `ADMIN_PASSWORD` | Mot de passe de l'administrateur initial (12 à 72 caractères) | Oui au 1er démarrage | `AdminSuperSecret123!` |
+| `ADMIN_FIRST_NAME` | Prénom de l'administrateur initial | Optionnel (défaut `Admin`) | `Admin` |
+| `ADMIN_LAST_NAME` | Nom de l'administrateur initial | Optionnel (défaut `Administrator`) | `Administrator` |
+| `UPLOAD_DIR` | Répertoire de stockage local des photos des terrains | Oui | `C:/Users/HP/uploads` ou `/var/uploads` |
+
+> [!NOTE]
+> **Initialisation automatique de l'Administrateur (Admin Initializer) :**
+> Au premier démarrage, si aucun administrateur n'existe dans la base, le bean `@Singleton @Startup AdminInitializer` crée le compte ADMIN avec le statut `ACTIVE` et le flag `mustChangePassword = true`. Si `ADMIN_EMAIL` ou `ADMIN_PASSWORD` est absent ou invalide, le démarrage échoue par mesure de sécurité. Une fois le premier démarrage réussi, `ADMIN_PASSWORD` peut être retiré des variables d'environnement. Aucune requête manuelle `UPDATE users SET role='ADMIN'` n'est requise.
 
 ### Configuration WildFly (datasource)
 

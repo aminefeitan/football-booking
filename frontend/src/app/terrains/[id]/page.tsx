@@ -5,10 +5,11 @@ import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { MapPin, Lightning, Car, Shower, Moon, Phone, ArrowLeft, Lock, User as UserIcon, Clock } from "@phosphor-icons/react";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth, ProtectedRoute } from "@/context/AuthContext";
 import { getFieldById, getFieldSlots } from "@/services/fields.service";
 import { Button } from "@/components/ui/Button";
 import { SlotBoard } from "@/components/booking/SlotBoard";
+import { FieldPhoto } from "@/components/ui/FieldPhoto";
 import { formatPrice, formatFieldType, formatSurface, formatWorkingHours } from "@/lib/utils";
 
 interface Props { params: Promise<{ id: string }> }
@@ -54,7 +55,8 @@ export default function TerrainDetailPage({ params }: Props) {
   ];
 
   return (
-    <div className="min-h-screen bg-nuit-pelouse">
+    <ProtectedRoute>
+      <div className="min-h-screen bg-nuit-pelouse">
       <div className="max-w-5xl mx-auto px-4 py-5 pb-16">
 
         {/* Retour */}
@@ -66,15 +68,19 @@ export default function TerrainDetailPage({ params }: Props) {
 
         {/* Visuel hero */}
         <div className="relative border-2 border-encre h-48 md:h-64 bg-encre/60 shadow-brutal-xl mb-6 overflow-hidden">
-          <svg className="absolute inset-0 w-full h-full opacity-20" viewBox="0 0 800 300" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
-            <rect width="800" height="300" fill="#0B2E22"/>
-            <rect x="20" y="15" width="760" height="270" fill="none" stroke="#C8FF3D" strokeWidth="2.5"/>
-            <line x1="400" y1="15" x2="400" y2="285" stroke="#C8FF3D" strokeWidth="1.5"/>
-            <circle cx="400" cy="150" r="50" fill="none" stroke="#C8FF3D" strokeWidth="1.5"/>
-            <circle cx="400" cy="150" r="6" fill="#C8FF3D"/>
-            <rect x="20" y="105" width="65" height="90" fill="none" stroke="#C8FF3D" strokeWidth="1.5"/>
-            <rect x="715" y="105" width="65" height="90" fill="none" stroke="#C8FF3D" strokeWidth="1.5"/>
-          </svg>
+          {field.photoUrl ? (
+            <FieldPhoto photoUrl={field.photoUrl} alt={field.name} className="w-full h-full object-cover" />
+          ) : (
+            <svg className="absolute inset-0 w-full h-full opacity-20" viewBox="0 0 800 300" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+              <rect width="800" height="300" fill="#0B2E22"/>
+              <rect x="20" y="15" width="760" height="270" fill="none" stroke="#C8FF3D" strokeWidth="2.5"/>
+              <line x1="400" y1="15" x2="400" y2="285" stroke="#C8FF3D" strokeWidth="1.5"/>
+              <circle cx="400" cy="150" r="50" fill="none" stroke="#C8FF3D" strokeWidth="1.5"/>
+              <circle cx="400" cy="150" r="6" fill="#C8FF3D"/>
+              <rect x="20" y="105" width="65" height="90" fill="none" stroke="#C8FF3D" strokeWidth="1.5"/>
+              <rect x="715" y="105" width="65" height="90" fill="none" stroke="#C8FF3D" strokeWidth="1.5"/>
+            </svg>
+          )}
           {/* Prix */}
           <div className="absolute bottom-3 right-3 bg-vert-projecteur text-encre border-2 border-encre px-3 py-1.5 shadow-brutal">
             <div className="font-mono font-black text-xl leading-none">{formatPrice(field.pricePerHour)}</div>
@@ -235,5 +241,6 @@ export default function TerrainDetailPage({ params }: Props) {
         </div>
       </div>
     </div>
+  </ProtectedRoute>
   );
 }

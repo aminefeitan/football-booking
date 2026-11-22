@@ -39,6 +39,9 @@ public class FieldService {
     @Inject
     private BookingRepository bookingRepository;
 
+    @Inject
+    private PhotoStorageService photoStorageService;
+
     public List<FieldResponse> searchApprovedFields(String city, String fieldType, BigDecimal maxPrice,
                                                     Boolean indoor, Boolean hasLights, Integer page, Integer size) {
         return fieldRepository.search(city, fieldType, maxPrice, indoor, hasLights, page, size).stream()
@@ -187,5 +190,66 @@ public class FieldService {
         field.setHasParking(req.hasParking());
         field.setOpenTime(req.openTime());
         field.setCloseTime(req.closeTime());
+    }
+
+    @Transactional
+    public FieldResponse uploadPhoto(UUID fieldId, UUID callerId, boolean isAdmin, java.io.InputStream is) {
+        Field field = fieldRepository.findById(fieldId)
+                .orElseThrow(() -> new NotFoundException("Terrain introuvable"));
+
+        if (!isAdmin && !field.getOwner().getId().equals(callerId)) {
+            throw new ForbiddenException("Seul le propriétaire ou un administrateur peut modifier ce terrain");
+        }
+
+        String oldPhoto = field.getPhotoFilename();
+        String newPhoto = photoStorageService.savePhoto(is);
+        field.setPhotoFilename(newPhoto);
+
+        if (oldPhoto != null && !oldPhoto.isBlank()) {
+            photoStorageService.deletePhoto(oldPhoto);
+        }
+
+        return FieldResponse.from(field);
+    }
+
+    @Transactional
+    public void deletePhoto(UUID fieldId, UUID callerId, boolean isAdmin) {
+        Field field = fieldRepository.findById(fieldId)
+                .orElseThrow(() -> new NotFoundException("Terrain introuvable"));
+
+        if (!isAdmin && !field.getOwner().getId().equals(callerId)) {
+            throw new ForbiddenException("Seul le propriétaire ou un administrateur peut modifier ce terrain");
+        }
+
+        if (field.getPhotoFilename() != null && !field.getPhotoFilename().isBlank()) {
+            photoStorageService.deletePhoto(field.getPhotoFilename());
+            field.setPhotoFilename(null);
+        }
+    }
+
+    public record PhotoData(byte[] bytes, String contentType) {}
+
+    public PhotoData getPhoto(UUID fieldId, UUID callerId, boolean isAdmin) {
+        Field field = fieldRepository.findById(fieldId)
+                .orElseThrow(() -> new NotFoundException("Terrain introuvable"));
+
+        if (field.getStatus() != Field.FieldStatus.APPROVED) {
+            boolean isOwner = callerId != null && field.getOwner().getId().equals(callerId);
+            if (!isOwner && !isAdmin) {
+                throw new NotFoundException("Terrain introuvable");
+            }
+        }
+
+        if (field.getPhotoFilename() == null || field.getPhotoFilename().isBlank()) {
+            throw new NotFoundException("Photo introuvable");
+        }
+
+        byte[] bytes = photoStorageService.loadPhoto(field.getPhotoFilename());
+        if (bytes == null) {
+            throw new NotFoundException("Photo introuvable");
+        }
+
+        String contentType = photoStorageService.getContentType(field.getPhotoFilename());
+        return new PhotoData(bytes, contentType);
     }
 }
