@@ -37,7 +37,7 @@ public class FieldRepository {
         return Optional.ofNullable(em.find(Field.class, id, LockModeType.PESSIMISTIC_WRITE));
     }
 
-    public List<Field> search(String city, String type, BigDecimal maxPrice, Boolean indoor, Boolean hasLights) {
+    public List<Field> search(String city, String type, BigDecimal maxPrice, Boolean indoor, Boolean hasLights, Integer page, Integer size) {
         StringBuilder jpql = new StringBuilder(
                 "SELECT f FROM Field f JOIN FETCH f.owner WHERE f.status = :approved");
         Map<String, Object> params = new HashMap<>();
@@ -68,7 +68,19 @@ public class FieldRepository {
 
         TypedQuery<Field> query = em.createQuery(jpql.toString(), Field.class);
         params.forEach(query::setParameter);
+
+        if (page != null && size != null && size > 0) {
+            int p = Math.max(0, page);
+            int s = Math.min(100, Math.max(1, size));
+            query.setFirstResult(p * s);
+            query.setMaxResults(s);
+        }
+
         return query.getResultList();
+    }
+
+    public List<Field> search(String city, String type, BigDecimal maxPrice, Boolean indoor, Boolean hasLights) {
+        return search(city, type, maxPrice, indoor, hasLights, null, null);
     }
 
     public List<Field> findByOwner(UUID ownerId) {

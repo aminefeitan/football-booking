@@ -120,7 +120,7 @@ class BookingServiceTest {
         when(matchRepository.findById(matchId)).thenReturn(Optional.of(testMatch));
         when(bookingRepository.findActiveByMatch(matchId)).thenReturn(Optional.empty());
         when(bookingRepository.countPendingByUser(playerId)).thenReturn(0L);
-        when(fieldRepository.findByIdForUpdate(fieldId)).thenReturn(Optional.of(testField));
+        when(fieldRepository.findById(fieldId)).thenReturn(Optional.of(testField));
         when(bookingRepository.existsOverlapping(eq(fieldId), any(OffsetDateTime.class), any(OffsetDateTime.class))).thenReturn(true);
 
         ClientErrorException ex = assertThrows(ClientErrorException.class, () ->
@@ -140,7 +140,7 @@ class BookingServiceTest {
         when(matchRepository.findById(matchId)).thenReturn(Optional.of(testMatch));
         when(bookingRepository.findActiveByMatch(matchId)).thenReturn(Optional.empty());
         when(bookingRepository.countPendingByUser(playerId)).thenReturn(0L);
-        when(fieldRepository.findByIdForUpdate(fieldId)).thenReturn(Optional.of(testField));
+        when(fieldRepository.findById(fieldId)).thenReturn(Optional.of(testField));
         when(bookingRepository.existsOverlapping(eq(fieldId), any(OffsetDateTime.class), any(OffsetDateTime.class))).thenReturn(false);
 
         BookingResponse res = bookingService.createBooking(playerId, req);
@@ -162,7 +162,7 @@ class BookingServiceTest {
         when(matchRepository.findById(matchId)).thenReturn(Optional.of(testMatch));
         when(bookingRepository.findActiveByMatch(matchId)).thenReturn(Optional.empty());
         when(bookingRepository.countPendingByUser(playerId)).thenReturn(0L);
-        when(fieldRepository.findByIdForUpdate(fieldId)).thenReturn(Optional.of(testField));
+        when(fieldRepository.findById(fieldId)).thenReturn(Optional.of(testField));
 
         ClientErrorException ex = assertThrows(ClientErrorException.class, () ->
                 bookingService.createBooking(playerId, req));

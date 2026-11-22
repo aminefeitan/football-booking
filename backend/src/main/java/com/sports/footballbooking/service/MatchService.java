@@ -71,10 +71,14 @@ public class MatchService {
         return MatchResponse.from(match);
     }
 
-    public List<MatchResponse> getMyMatches(UUID userId) {
-        return matchRepository.findByUserId(userId).stream()
+    public List<MatchResponse> getMyMatches(UUID userId, Integer page, Integer size) {
+        return matchRepository.findByUserId(userId, page, size).stream()
                 .map(MatchResponse::from)
                 .toList();
+    }
+
+    public List<MatchResponse> getMyMatches(UUID userId) {
+        return getMyMatches(userId, null, null);
     }
 
     public MatchResponse getMatchDetails(UUID matchId, UUID userId, boolean isAdmin) {

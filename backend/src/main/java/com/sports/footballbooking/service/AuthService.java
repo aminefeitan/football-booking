@@ -50,7 +50,12 @@ public class AuthService {
         );
         userRepository.persist(user);
 
-        String token = jwtService.generateToken(user.getId());
+        String token = jwtService.generateToken(
+                user.getId(),
+                user.getRole() != null ? user.getRole().name() : null,
+                user.getStatus() != null ? user.getStatus().name() : null,
+                user.getEmail()
+        );
         return new AuthResponse(token, UserResponse.from(user));
     }
 
@@ -68,7 +73,12 @@ public class AuthService {
             throw new ForbiddenException("Ce compte est " + user.getStatus().name().toLowerCase());
         }
 
-        String token = jwtService.generateToken(user.getId());
+        String token = jwtService.generateToken(
+                user.getId(),
+                user.getRole() != null ? user.getRole().name() : null,
+                user.getStatus() != null ? user.getStatus().name() : null,
+                user.getEmail()
+        );
         return new AuthResponse(token, UserResponse.from(user));
     }
 

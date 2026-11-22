@@ -24,6 +24,7 @@ import { getManagerStats } from "@/services/stats.service";
 import { Button } from "@/components/ui/Button";
 import { formatDateTime, formatDate, money } from "@/lib/format";
 import type { Field, Booking, BookingStatus, FieldStatus } from "@/lib/types";
+import { MOROCCAN_CITIES } from "@/lib/constants";
 
 function DashboardContent() {
   const router = useRouter();
@@ -38,19 +39,19 @@ function DashboardContent() {
   const [editingFieldId, setEditingFieldId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
-  const [city, setCity] = useState("Casablanca");
+  const [city, setCity] = useState("");
   const [phone, setPhone] = useState("");
   const [description, setDescription] = useState("");
   const [fieldType, setFieldType] = useState("5v5");
-  const [surfaceType, setSurfaceType] = useState("Synthétique");
+  const [surfaceType, setSurfaceType] = useState("");
   const [capacity, setCapacity] = useState(10);
   const [pricePerHour, setPricePerHour] = useState(400);
   const [openTime, setOpenTime] = useState("09:00");
   const [closeTime, setCloseTime] = useState("23:00");
   const [indoor, setIndoor] = useState(false);
-  const [hasLights, setHasLights] = useState(true);
-  const [hasLockerRoom, setHasLockerRoom] = useState(true);
-  const [hasParking, setHasParking] = useState(true);
+  const [hasLights, setHasLights] = useState(false);
+  const [hasLockerRoom, setHasLockerRoom] = useState(false);
+  const [hasParking, setHasParking] = useState(false);
 
   // Booking filters & reject modal
   const [bookingStatusFilter, setBookingStatusFilter] = useState<BookingStatus | "ALL">("ALL");
@@ -98,7 +99,7 @@ function DashboardContent() {
         name: name.trim(),
         address: address.trim(),
         city: city.trim(),
-        phone: phone.trim() || undefined,
+        phone: phone.trim() ? `+212${phone.trim().replace(/^0+/, "")}` : undefined,
         description: description.trim() || undefined,
         fieldType,
         surfaceType: surfaceType.trim() || undefined,
@@ -177,10 +178,10 @@ function DashboardContent() {
     setName(f.name);
     setAddress(f.address);
     setCity(f.city);
-    setPhone(f.phone ?? "");
+    setPhone((f.phone ?? "").replace(/^\+212/, ""));
     setDescription(f.description ?? "");
     setFieldType(f.fieldType);
-    setSurfaceType(f.surfaceType ?? "Synthétique");
+    setSurfaceType(f.surfaceType ?? "");
     setCapacity(f.capacity ?? 10);
     setPricePerHour(f.pricePerHour);
     setOpenTime(f.openTime);
@@ -196,19 +197,19 @@ function DashboardContent() {
     setEditingFieldId(null);
     setName("");
     setAddress("");
-    setCity("Casablanca");
+    setCity("");
     setPhone("");
     setDescription("");
     setFieldType("5v5");
-    setSurfaceType("Synthétique");
+    setSurfaceType("");
     setCapacity(10);
     setPricePerHour(400);
     setOpenTime("09:00");
     setCloseTime("23:00");
     setIndoor(false);
-    setHasLights(true);
-    setHasLockerRoom(true);
-    setHasParking(true);
+    setHasLights(false);
+    setHasLockerRoom(false);
+    setHasParking(false);
   };
 
   const getStatusBadge = (status: FieldStatus) => {
@@ -604,14 +605,17 @@ function DashboardContent() {
                   </div>
                   <div className="space-y-1">
                     <label className="font-mono text-xs uppercase text-craie/60 block">Ville</label>
-                    <input
-                      type="text"
+                    <select
                       value={city}
                       onChange={(e) => setCity(e.target.value)}
                       required
-                      placeholder="Casablanca"
                       className="w-full border-2 border-encre/60 bg-nuit-pelouse text-craie px-3 py-2 text-sm outline-none focus:border-orange-sifflet"
-                    />
+                    >
+                      <option value="" disabled>Sélectionner une ville</option>
+                      {MOROCCAN_CITIES.map((c) => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                    </select>
                   </div>
                 </div>
 
@@ -629,13 +633,21 @@ function DashboardContent() {
                   </div>
                   <div className="space-y-1">
                     <label className="font-mono text-xs uppercase text-craie/60 block">Téléphone contact</label>
-                    <input
-                      type="tel"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      placeholder="+212 6 00 00 00 00"
-                      className="w-full border-2 border-encre/60 bg-nuit-pelouse text-craie px-3 py-2 text-sm outline-none focus:border-orange-sifflet"
-                    />
+                    <div className="flex items-center border-2 border-encre/60 bg-nuit-pelouse focus-within:border-orange-sifflet overflow-hidden">
+                      <span className="px-3 py-2 text-sm font-mono text-craie/70 bg-encre/60 select-none">+212</span>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={phone}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/[^0-9]/g, "");
+                          setPhone(val);
+                        }}
+                        maxLength={9}
+                        placeholder="6 28 45 18 51"
+                        className="w-full bg-transparent text-craie px-3 py-2 text-sm outline-none border-none"
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -654,13 +666,20 @@ function DashboardContent() {
                   </div>
                   <div className="space-y-1">
                     <label className="font-mono text-xs uppercase text-craie/60 block">Surface</label>
-                    <input
-                      type="text"
+                    <select
                       value={surfaceType}
                       onChange={(e) => setSurfaceType(e.target.value)}
-                      placeholder="Synthétique"
+                      required
                       className="w-full border-2 border-encre/60 bg-nuit-pelouse text-craie px-3 py-2 text-sm outline-none focus:border-orange-sifflet"
-                    />
+                    >
+                      <option value="" disabled>Sélectionner</option>
+                      <option value="SYNTHETIC">Synthétique</option>
+                      <option value="NATURAL_GRASS">Gazon naturel</option>
+                      <option value="HYBRID">Hybride</option>
+                      <option value="INDOOR">Indoor</option>
+                      <option value="FUTSAL">Futsal</option>
+                      <option value="ARTIFICIAL_TURF">Pelouse artificielle</option>
+                    </select>
                   </div>
                   <div className="space-y-1">
                     <label className="font-mono text-xs uppercase text-craie/60 block">Prix / heure (MAD)</label>

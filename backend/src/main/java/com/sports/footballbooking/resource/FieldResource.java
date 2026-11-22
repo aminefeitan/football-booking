@@ -34,8 +34,10 @@ public class FieldResource {
             @QueryParam("fieldType") String fieldType,
             @QueryParam("maxPrice") BigDecimal maxPrice,
             @QueryParam("indoor") Boolean indoor,
-            @QueryParam("hasLights") Boolean hasLights) {
-        return fieldService.searchApprovedFields(city, fieldType, maxPrice, indoor, hasLights);
+            @QueryParam("hasLights") Boolean hasLights,
+            @QueryParam("page") @DefaultValue("0") Integer page,
+            @QueryParam("size") @DefaultValue("20") Integer size) {
+        return fieldService.searchApprovedFields(city, fieldType, maxPrice, indoor, hasLights, page, size);
     }
 
     @GET
