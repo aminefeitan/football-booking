@@ -15,6 +15,8 @@ import jakarta.ws.rs.ext.Provider;
 
 import java.io.IOException;
 import java.security.Principal;
+import java.util.Optional;
+import java.util.UUID;
 
 @Provider
 @ApplicationScoped
@@ -23,6 +25,9 @@ public class AuthFilter implements ContainerRequestFilter {
 
     @Inject
     private AuthService authService;
+
+    @Inject
+    private JwtService jwtService;
 
     @Override
     public void filter(ContainerRequestContext requestContext) throws IOException {
@@ -43,7 +48,29 @@ public class AuthFilter implements ContainerRequestFilter {
             throw new NotAuthorizedException("Bearer");
         }
 
-        User user = authService.authenticate(token);
+        Optional<JwtService.UserPrincipalData> principalDataOpt = jwtService.parseToken(token);
+        if (principalDataOpt.isEmpty()) {
+            throw new NotAuthorizedException("Bearer");
+        }
+
+        JwtService.UserPrincipalData principalData = principalDataOpt.get();
+        final UUID userId = principalData.userId();
+        final String roleName;
+        final String statusName;
+
+        // Fast path: if claims are present in token, authenticate completely in-memory with 0 database queries!
+        if (principalData.role() != null && principalData.status() != null) {
+            roleName = principalData.role();
+            statusName = principalData.status();
+            if (!"ACTIVE".equalsIgnoreCase(statusName)) {
+                throw new jakarta.ws.rs.ForbiddenException("Ce compte est " + statusName.toLowerCase());
+            }
+        } else {
+            // Fallback for legacy tokens without claims: query database
+            User user = authService.authenticate(token);
+            roleName = user.getRole() != null ? user.getRole().name() : null;
+            statusName = user.getStatus() != null ? user.getStatus().name() : null;
+        }
 
         SecurityContext originalContext = requestContext.getSecurityContext();
         boolean isSecure = originalContext != null && originalContext.isSecure();
@@ -51,12 +78,12 @@ public class AuthFilter implements ContainerRequestFilter {
         requestContext.setSecurityContext(new SecurityContext() {
             @Override
             public Principal getUserPrincipal() {
-                return () -> user.getId().toString();
+                return () -> userId.toString();
             }
 
             @Override
             public boolean isUserInRole(String role) {
-                return user.getRole() != null && user.getRole().name().equalsIgnoreCase(role);
+                return roleName != null && roleName.equalsIgnoreCase(role);
             }
 
             @Override

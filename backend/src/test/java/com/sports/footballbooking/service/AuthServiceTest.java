@@ -70,7 +70,7 @@ class AuthServiceTest {
             setId(u, userId);
             return null;
         }).when(userRepository).persist(any(User.class));
-        when(jwtService.generateToken(userId)).thenReturn("mock.jwt.token");
+        when(jwtService.generateToken(eq(userId), any(), any(), any())).thenReturn("mock.jwt.token");
 
         AuthResponse res = authService.register(req);
 

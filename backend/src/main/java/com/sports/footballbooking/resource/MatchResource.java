@@ -35,9 +35,12 @@ public class MatchResource {
 
     @GET
     @Path("/me")
-    public List<MatchResponse> getMyMatches(@Context SecurityContext sec) {
+    public List<MatchResponse> getMyMatches(
+            @Context SecurityContext sec,
+            @QueryParam("page") @DefaultValue("0") Integer page,
+            @QueryParam("size") @DefaultValue("20") Integer size) {
         UUID userId = UUID.fromString(sec.getUserPrincipal().getName());
-        return matchService.getMyMatches(userId);
+        return matchService.getMyMatches(userId, page, size);
     }
 
     @GET

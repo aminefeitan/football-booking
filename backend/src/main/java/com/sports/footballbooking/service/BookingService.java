@@ -81,8 +81,8 @@ public class BookingService {
             throw new ClientErrorException("Limite maximale de " + MAX_PENDING_BOOKINGS + " réservations en attente atteinte", Response.Status.CONFLICT);
         }
 
-        // Pessimistic lock on Field
-        Field field = fieldRepository.findByIdForUpdate(req.fieldId())
+        // Load Field (concurrency is protected at slot level by PostgreSQL GiST exclusion constraint)
+        Field field = fieldRepository.findById(req.fieldId())
                 .orElseThrow(() -> new NotFoundException("Terrain introuvable"));
 
         if (field.getStatus() != Field.FieldStatus.APPROVED) {
@@ -124,8 +124,28 @@ public class BookingService {
                 req.notes() != null ? req.notes().trim() : null);
 
         bookingRepository.persist(booking);
+        try {
+            bookingRepository.flush();
+        } catch (Exception e) {
+            if (isOverlapConstraintViolation(e)) {
+                throw new ClientErrorException("Le terrain est déjà réservé sur ce créneau", Response.Status.CONFLICT);
+            }
+            throw e;
+        }
 
         return BookingResponse.from(booking);
+    }
+
+    private boolean isOverlapConstraintViolation(Throwable t) {
+        Throwable current = t;
+        while (current != null) {
+            String msg = current.getMessage();
+            if (msg != null && (msg.contains("excl_bookings_overlap") || msg.contains("exclusion constraint"))) {
+                return true;
+            }
+            current = current.getCause();
+        }
+        return false;
     }
 
     public List<BookingResponse> getMyBookings(UUID userId) {
