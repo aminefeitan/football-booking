@@ -1,0 +1,6 @@
+com\sports\footballbooking\service\TeamServiceTest.class
+com\sports\footballbooking\security\JwtServiceTest.class
+com\sports\footballbooking\security\SecurityAccessTest.class
+com\sports\footballbooking\service\AuthServiceTest.class
+com\sports\footballbooking\service\MatchServiceTest.class
+com\sports\footballbooking\service\BookingServiceTest.class
