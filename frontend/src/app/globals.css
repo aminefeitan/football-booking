@@ -64,6 +64,28 @@
   box-sizing: border-box;
 }
 
+/* Disable browser validation styling (yellow/red/green borders) */
+input:valid,
+input:invalid,
+input:required,
+select:valid,
+select:invalid,
+select:required,
+textarea:valid,
+textarea:invalid,
+textarea:required {
+  box-shadow: none !important;
+  outline: none;
+}
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px #0B2E22 inset !important;
+  -webkit-text-fill-color: #F5F0E1 !important;
+  border-color: inherit !important;
+}
+
 html {
   font-family: var(--font-body);
   background-color: #0B2E22;

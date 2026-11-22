@@ -69,25 +69,49 @@ export function formatSurface(surface: string): string {
   const map: Record<string, string> = {
     SYNTHETIC: "Synthétique",
     NATURAL_GRASS: "Gazon naturel",
+    HYBRID: "Hybride",
     INDOOR: "Indoor",
     FUTSAL: "Futsal",
+    ARTIFICIAL_TURF: "Pelouse artificielle",
   };
   return map[surface] ?? surface;
 }
 
-export function formatTime12h(timeStr?: string): string {
+export function formatTime12h(timeStr?: string | number[]): string {
   if (!timeStr) return "";
-  const parts = timeStr.split(":");
-  if (parts.length < 2) return timeStr;
-  const h = parseInt(parts[0], 10);
-  const m = parseInt(parts[1], 10);
-  if (isNaN(h)) return timeStr;
+
+  let h: number;
+  let m: number;
+
+  // Handle Jackson array format: [8, 0] or [14, 30]
+  if (Array.isArray(timeStr)) {
+    h = timeStr[0] ?? 0;
+    m = timeStr[1] ?? 0;
+  } else if (typeof timeStr === "string") {
+    const parts = timeStr.split(":");
+    if (parts.length < 2) return timeStr;
+    h = parseInt(parts[0], 10);
+    m = parseInt(parts[1], 10);
+    if (isNaN(h)) return timeStr;
+  } else {
+    return "";
+  }
+
   const ampm = h >= 12 ? "PM" : "AM";
   const h12 = h % 12 === 0 ? 12 : h % 12;
   return m === 0 ? `${h12} ${ampm}` : `${h12}:${m.toString().padStart(2, "0")} ${ampm}`;
 }
 
-export function formatWorkingHours(open = "09:00", close = "23:00"): string {
-  return `${open} - ${close} (${formatTime12h(open)} - ${formatTime12h(close)})`;
+export function formatWorkingHours(
+  open: string | number[] = "09:00",
+  close: string | number[] = "23:00"
+): string {
+  const openStr = Array.isArray(open)
+    ? `${open[0]?.toString().padStart(2, "0")}:${(open[1] ?? 0).toString().padStart(2, "0")}`
+    : open;
+  const closeStr = Array.isArray(close)
+    ? `${close[0]?.toString().padStart(2, "0")}:${(close[1] ?? 0).toString().padStart(2, "0")}`
+    : close;
+  return `${openStr} - ${closeStr} (${formatTime12h(open)} - ${formatTime12h(close)})`;
 }
 

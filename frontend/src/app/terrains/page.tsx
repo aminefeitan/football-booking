@@ -19,6 +19,12 @@ import { FieldCard } from "@/components/ui/FieldCard";
 import { Button } from "@/components/ui/Button";
 import { getFields, type FieldFilters } from "@/services/fields.service";
 import { cn } from "@/lib/utils";
+import { MOROCCAN_CITIES } from "@/lib/constants";
+
+const CITY_OPTIONS = [
+  { value: "", label: "Toutes les villes" },
+  ...MOROCCAN_CITIES.map((c) => ({ value: c, label: c })),
+];
 
 const FORMAT_OPTIONS = [
   { value: "", label: "Tous formats" },
@@ -147,25 +153,21 @@ function TerrainsContent() {
         <div className="max-w-6xl mx-auto space-y-3">
           {/* Ligne 1 : Recherche ville + Tri */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            {/* Input Ville */}
+            {/* Select Ville */}
             <div className="md:col-span-2 flex items-center border-2 border-encre bg-encre px-3 py-2 shadow-brutal focus-within:border-vert-projecteur transition-colors">
               <MapPin size={16} weight="bold" className="text-vert-projecteur shrink-0 mr-2" />
-              <input
-                type="text"
-                placeholder="Filtrer par ville (ex: Paris, Lyon, Marseille)..."
+              <select
                 value={searchCity}
                 onChange={(e) => setSearchCity(e.target.value)}
-                className="w-full bg-transparent text-craie placeholder-craie/30 text-sm font-body outline-none"
-                aria-label="Rechercher par ville"
-              />
-              {searchCity && (
-                <button
-                  onClick={() => setSearchCity("")}
-                  className="text-craie/40 hover:text-craie text-xs font-mono ml-2"
-                >
-                  ✕
-                </button>
-              )}
+                className="w-full bg-transparent text-craie text-sm font-body outline-none cursor-pointer"
+                aria-label="Filtrer par ville"
+              >
+                {CITY_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value} className="bg-encre text-craie">
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
             </div>
 
             {/* Tri */}

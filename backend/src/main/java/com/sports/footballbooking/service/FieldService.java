@@ -40,10 +40,15 @@ public class FieldService {
     private BookingRepository bookingRepository;
 
     public List<FieldResponse> searchApprovedFields(String city, String fieldType, BigDecimal maxPrice,
-                                                    Boolean indoor, Boolean hasLights) {
-        return fieldRepository.search(city, fieldType, maxPrice, indoor, hasLights).stream()
+                                                    Boolean indoor, Boolean hasLights, Integer page, Integer size) {
+        return fieldRepository.search(city, fieldType, maxPrice, indoor, hasLights, page, size).stream()
                 .map(FieldResponse::from)
                 .toList();
+    }
+
+    public List<FieldResponse> searchApprovedFields(String city, String fieldType, BigDecimal maxPrice,
+                                                    Boolean indoor, Boolean hasLights) {
+        return searchApprovedFields(city, fieldType, maxPrice, indoor, hasLights, null, null);
     }
 
     public FieldResponse getFieldDetails(UUID fieldId, UUID currentUserId, boolean isAdmin) {

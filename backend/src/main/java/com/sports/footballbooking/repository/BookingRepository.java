@@ -128,6 +128,10 @@ public class BookingRepository {
         em.persist(booking);
     }
 
+    public void flush() {
+        em.flush();
+    }
+
     // --- Statistiques agrégées JPQL ---
 
     public Map<String, Long> countByStatusForManager(UUID managerId, OffsetDateTime from, OffsetDateTime to) {
