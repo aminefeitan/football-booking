@@ -11,9 +11,8 @@
     <data-source>
         <name>java:jboss/datasources/FootballBookingDS</name>
         <class-name>org.postgresql.ds.PGSimpleDataSource</class-name>
-        <url>jdbc:postgresql://localhost:5432/football_booking</url>
-        <user>postgres</user>
-        <password>admin</password>
+        <user>${db.user}</user>
+        <password>${db.password}</password>
     </data-source>
     <security-role>
         <role-name>PLAYER</role-name>
