@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { MapPin, Lightning, Moon, Clock } from "@phosphor-icons/react";
 import { cn, formatPrice, formatFieldType, formatWorkingHours } from "@/lib/utils";
+import { FieldPhoto } from "@/components/ui/FieldPhoto";
 import type { Field } from "@/lib/types";
 
 interface FieldCardProps {
@@ -28,16 +29,20 @@ export function FieldCard({ field, onClick, className }: FieldCardProps) {
       onKeyDown={(e) => e.key === "Enter" && onClick?.()}
       aria-label={`Voir le terrain ${field.name}`}
     >
-      {/* Visuel terrain SVG */}
+      {/* Visuel terrain SVG ou Photo */}
       <div className="relative h-32 w-full bg-encre/60 overflow-hidden border-b-2 border-encre">
-        <svg className="absolute inset-0 w-full h-full opacity-25" viewBox="0 0 320 128" fill="none" aria-hidden="true">
-          <rect x="2" y="2" width="316" height="124" stroke="#C8FF3D" strokeWidth="2"/>
-          <line x1="160" y1="2" x2="160" y2="126" stroke="#C8FF3D" strokeWidth="1.5"/>
-          <circle cx="160" cy="64" r="22" stroke="#C8FF3D" strokeWidth="1.5"/>
-          <circle cx="160" cy="64" r="3" fill="#C8FF3D"/>
-          <rect x="2" y="38" width="30" height="52" stroke="#C8FF3D" strokeWidth="1.5"/>
-          <rect x="288" y="38" width="30" height="52" stroke="#C8FF3D" strokeWidth="1.5"/>
-        </svg>
+        {field.photoUrl ? (
+          <FieldPhoto photoUrl={field.photoUrl} alt={field.name} className="w-full h-full object-cover" />
+        ) : (
+          <svg className="absolute inset-0 w-full h-full opacity-25" viewBox="0 0 320 128" fill="none" aria-hidden="true">
+            <rect x="2" y="2" width="316" height="124" stroke="#C8FF3D" strokeWidth="2"/>
+            <line x1="160" y1="2" x2="160" y2="126" stroke="#C8FF3D" strokeWidth="1.5"/>
+            <circle cx="160" cy="64" r="22" stroke="#C8FF3D" strokeWidth="1.5"/>
+            <circle cx="160" cy="64" r="3" fill="#C8FF3D"/>
+            <rect x="2" y="38" width="30" height="52" stroke="#C8FF3D" strokeWidth="1.5"/>
+            <rect x="288" y="38" width="30" height="52" stroke="#C8FF3D" strokeWidth="1.5"/>
+          </svg>
+        )}
 
         {/* Type terrain */}
         <div className="absolute top-2 left-2">

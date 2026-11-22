@@ -1,8 +1,8 @@
 package com.sports.footballbooking.security;
 
 import com.sports.footballbooking.entity.User;
+import com.sports.footballbooking.repository.UserRepository;
 import com.sports.footballbooking.resource.UserAdminResource;
-import com.sports.footballbooking.service.AuthService;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.ws.rs.ForbiddenException;
 import jakarta.ws.rs.NotAuthorizedException;
@@ -20,6 +20,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.lang.reflect.Field;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -29,7 +30,10 @@ import static org.mockito.Mockito.*;
 class SecurityAccessTest {
 
     @Mock
-    private AuthService authService;
+    private JwtService jwtService;
+
+    @Mock
+    private UserRepository userRepository;
 
     @Mock
     private ContainerRequestContext requestContext;
@@ -59,7 +63,8 @@ class SecurityAccessTest {
         when(requestContext.getUriInfo()).thenReturn(uriInfo);
         when(uriInfo.getPath()).thenReturn("admin/users");
         when(requestContext.getHeaderString(HttpHeaders.AUTHORIZATION)).thenReturn("Bearer valid-player-jwt");
-        when(authService.authenticate("valid-player-jwt")).thenReturn(playerUser);
+        when(jwtService.validate("valid-player-jwt")).thenReturn(Optional.of(playerId));
+        when(userRepository.findById(playerId)).thenReturn(Optional.of(playerUser));
 
         ArgumentCaptor<SecurityContext> secCaptor = ArgumentCaptor.forClass(SecurityContext.class);
 
@@ -95,13 +100,125 @@ class SecurityAccessTest {
     }
 
     @Test
+    @DisplayName("Section A : Endpoints /fields non authentifiés -> 401 NotAuthorizedException obligatoire")
+    void testUnauthenticatedFieldsRequireAuth() {
+        when(requestContext.getMethod()).thenReturn("GET");
+        when(requestContext.getUriInfo()).thenReturn(uriInfo);
+        when(uriInfo.getPath()).thenReturn("fields");
+        when(requestContext.getHeaderString(HttpHeaders.AUTHORIZATION)).thenReturn(null);
+
+        assertThrows(NotAuthorizedException.class, () -> authFilter.filter(requestContext));
+    }
+
+    @Test
+    @DisplayName("Section A : Endpoints /fields/{id} non authentifiés -> 401 NotAuthorizedException obligatoire")
+    void testUnauthenticatedFieldDetailRequiresAuth() {
+        when(requestContext.getMethod()).thenReturn("GET");
+        when(requestContext.getUriInfo()).thenReturn(uriInfo);
+        when(uriInfo.getPath()).thenReturn("fields/123");
+        when(requestContext.getHeaderString(HttpHeaders.AUTHORIZATION)).thenReturn(null);
+
+        assertThrows(NotAuthorizedException.class, () -> authFilter.filter(requestContext));
+    }
+
+    @Test
+    @DisplayName("Section A : Endpoints /fields/{id}/slots non authentifiés -> 401 NotAuthorizedException obligatoire")
+    void testUnauthenticatedFieldSlotsRequireAuth() {
+        when(requestContext.getMethod()).thenReturn("GET");
+        when(requestContext.getUriInfo()).thenReturn(uriInfo);
+        when(uriInfo.getPath()).thenReturn("fields/123/slots");
+        when(requestContext.getHeaderString(HttpHeaders.AUTHORIZATION)).thenReturn(null);
+
+        assertThrows(NotAuthorizedException.class, () -> authFilter.filter(requestContext));
+    }
+
+    @Test
+    @DisplayName("Section A : Endpoints /fields/{id}/photo non authentifiés -> 401 NotAuthorizedException obligatoire")
+    void testUnauthenticatedFieldPhotoRequiresAuth() {
+        when(requestContext.getMethod()).thenReturn("GET");
+        when(requestContext.getUriInfo()).thenReturn(uriInfo);
+        when(uriInfo.getPath()).thenReturn("fields/123/photo");
+        when(requestContext.getHeaderString(HttpHeaders.AUTHORIZATION)).thenReturn(null);
+
+        assertThrows(NotAuthorizedException.class, () -> authFilter.filter(requestContext));
+    }
+
+    @Test
+    @DisplayName("Section A : OPTIONS, POST auth/login et POST auth/register sont les SEULES routes publiques")
+    void testStrictPublicEndpoints() throws Exception {
+        // OPTIONS
+        when(requestContext.getMethod()).thenReturn("OPTIONS");
+        when(requestContext.getUriInfo()).thenReturn(uriInfo);
+        when(uriInfo.getPath()).thenReturn("anything");
+        authFilter.filter(requestContext);
+        verify(requestContext, never()).setSecurityContext(any());
+
+        // POST auth/login
+        when(requestContext.getMethod()).thenReturn("POST");
+        when(uriInfo.getPath()).thenReturn("auth/login");
+        authFilter.filter(requestContext);
+        verify(requestContext, never()).setSecurityContext(any());
+
+        // POST auth/register
+        when(requestContext.getMethod()).thenReturn("POST");
+        when(uriInfo.getPath()).thenReturn("auth/register");
+        authFilter.filter(requestContext);
+        verify(requestContext, never()).setSecurityContext(any());
+    }
+
+    @Test
+    @DisplayName("Section B : mustChangePassword=true bloque toute ressource autre que GET users/me et PUT users/me/password")
+    void testMustChangePasswordBlocksOtherEndpoints() {
+        playerUser.setMustChangePassword(true);
+        when(requestContext.getMethod()).thenReturn("GET");
+        when(requestContext.getUriInfo()).thenReturn(uriInfo);
+        when(uriInfo.getPath()).thenReturn("fields");
+        when(requestContext.getHeaderString(HttpHeaders.AUTHORIZATION)).thenReturn("Bearer valid-jwt");
+        when(jwtService.validate("valid-jwt")).thenReturn(Optional.of(playerId));
+        when(userRepository.findById(playerId)).thenReturn(Optional.of(playerUser));
+
+        ForbiddenException ex = assertThrows(ForbiddenException.class, () -> authFilter.filter(requestContext));
+        assertEquals("Password change required", ex.getMessage());
+    }
+
+    @Test
+    @DisplayName("Section B : mustChangePassword=true autorise GET users/me")
+    void testMustChangePasswordAllowsGetUsersMe() throws Exception {
+        playerUser.setMustChangePassword(true);
+        when(requestContext.getMethod()).thenReturn("GET");
+        when(requestContext.getUriInfo()).thenReturn(uriInfo);
+        when(uriInfo.getPath()).thenReturn("users/me");
+        when(requestContext.getHeaderString(HttpHeaders.AUTHORIZATION)).thenReturn("Bearer valid-jwt");
+        when(jwtService.validate("valid-jwt")).thenReturn(Optional.of(playerId));
+        when(userRepository.findById(playerId)).thenReturn(Optional.of(playerUser));
+
+        assertDoesNotThrow(() -> authFilter.filter(requestContext));
+    }
+
+    @Test
+    @DisplayName("Section B : mustChangePassword=true autorise PUT users/me/password")
+    void testMustChangePasswordAllowsPutUsersMePassword() throws Exception {
+        playerUser.setMustChangePassword(true);
+        when(requestContext.getMethod()).thenReturn("PUT");
+        when(requestContext.getUriInfo()).thenReturn(uriInfo);
+        when(uriInfo.getPath()).thenReturn("users/me/password");
+        when(requestContext.getHeaderString(HttpHeaders.AUTHORIZATION)).thenReturn("Bearer valid-jwt");
+        when(jwtService.validate("valid-jwt")).thenReturn(Optional.of(playerId));
+        when(userRepository.findById(playerId)).thenReturn(Optional.of(playerUser));
+
+        assertDoesNotThrow(() -> authFilter.filter(requestContext));
+    }
+
+    @Test
     @DisplayName("Utilisateur non ACTIF (ex: SUSPENDED) -> 403 ForbiddenException")
     void testSuspendedUserForbidden() {
+        playerUser.setStatus(User.Status.SUSPENDED);
         when(requestContext.getMethod()).thenReturn("GET");
         when(requestContext.getUriInfo()).thenReturn(uriInfo);
         when(uriInfo.getPath()).thenReturn("bookings/me");
         when(requestContext.getHeaderString(HttpHeaders.AUTHORIZATION)).thenReturn("Bearer valid-token");
-        when(authService.authenticate("valid-token")).thenThrow(new ForbiddenException("Compte suspendu"));
+        when(jwtService.validate("valid-token")).thenReturn(Optional.of(playerId));
+        when(userRepository.findById(playerId)).thenReturn(Optional.of(playerUser));
 
         assertThrows(ForbiddenException.class, () -> authFilter.filter(requestContext));
     }

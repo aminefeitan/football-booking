@@ -85,6 +85,52 @@ public class FieldResource {
         return fieldService.updateField(id, callerId, isAdmin, req);
     }
 
+    @PUT
+    @Path("/{id}/photo")
+    @Consumes(MediaType.MULTIPART_FORM_DATA)
+    @RolesAllowed({"FIELD_MANAGER", "ADMIN"})
+    public FieldResponse uploadPhoto(
+            @PathParam("id") UUID id,
+            @Context SecurityContext sec,
+            List<jakarta.ws.rs.core.EntityPart> parts) throws java.io.IOException {
+        UUID callerId = UUID.fromString(sec.getUserPrincipal().getName());
+        boolean isAdmin = sec.isUserInRole("ADMIN");
+
+        if (parts == null || parts.isEmpty()) {
+            throw new BadRequestException("Part 'file' manquante dans le formulaire");
+        }
+
+        jakarta.ws.rs.core.EntityPart filePart = parts.stream()
+                .filter(p -> "file".equalsIgnoreCase(p.getName()))
+                .findFirst()
+                .orElseThrow(() -> new BadRequestException("Part 'file' manquante dans le formulaire"));
+
+        return fieldService.uploadPhoto(id, callerId, isAdmin, filePart.getContent());
+    }
+
+    @DELETE
+    @Path("/{id}/photo")
+    @RolesAllowed({"FIELD_MANAGER", "ADMIN"})
+    public Response deletePhoto(@PathParam("id") UUID id, @Context SecurityContext sec) {
+        UUID callerId = UUID.fromString(sec.getUserPrincipal().getName());
+        boolean isAdmin = sec.isUserInRole("ADMIN");
+        fieldService.deletePhoto(id, callerId, isAdmin);
+        return Response.noContent().build();
+    }
+
+    @GET
+    @Path("/{id}/photo")
+    @Produces({"image/jpeg", "image/png", "image/webp"})
+    public Response getPhoto(@PathParam("id") UUID id, @Context SecurityContext sec) {
+        UUID callerId = extractUserId(sec);
+        boolean isAdmin = sec != null && sec.isUserInRole("ADMIN");
+        FieldService.PhotoData photo = fieldService.getPhoto(id, callerId, isAdmin);
+        return Response.ok(photo.bytes(), photo.contentType())
+                .header("X-Content-Type-Options", "nosniff")
+                .header("Cache-Control", "private, max-age=3600")
+                .build();
+    }
+
     private UUID extractUserId(SecurityContext sec) {
         if (sec != null && sec.getUserPrincipal() != null && sec.getUserPrincipal().getName() != null) {
             try {

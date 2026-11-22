@@ -49,6 +49,22 @@ public class UserRepository {
                 .getResultList();
     }
 
+    public List<User> findByRole(User.Role role) {
+        if (role == null) {
+            return findAll();
+        }
+        return em.createQuery("SELECT u FROM User u WHERE u.role = :role ORDER BY u.createdAt DESC", User.class)
+                .setParameter("role", role)
+                .getResultList();
+    }
+
+    public boolean existsByRole(User.Role role) {
+        Long count = em.createQuery("SELECT COUNT(u) FROM User u WHERE u.role = :role", Long.class)
+                .setParameter("role", role)
+                .getSingleResult();
+        return count != null && count > 0;
+    }
+
     public void persist(User user) {
         em.persist(user);
     }

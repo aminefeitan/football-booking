@@ -107,7 +107,9 @@ export function ProtectedRoute({
   useEffect(() => {
     if (!loading) {
       if (!isAuthenticated) {
-        router.push("/auth");
+        router.push("/login");
+      } else if (user?.mustChangePassword) {
+        router.push("/change-password");
       } else if (allowedRoles && user && !allowedRoles.includes(user.role)) {
         router.push("/");
       }
@@ -125,6 +127,10 @@ export function ProtectedRoute({
   }
 
   if (!isAuthenticated) {
+    return null;
+  }
+
+  if (user?.mustChangePassword) {
     return null;
   }
 

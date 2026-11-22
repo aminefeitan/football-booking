@@ -29,6 +29,7 @@ public record FieldResponse(
         LocalTime openTime,
         LocalTime closeTime,
         Field.FieldStatus status,
+        String photoUrl,
         UUID reviewedById,
         OffsetDateTime createdAt
 ) {
@@ -39,6 +40,9 @@ public record FieldResponse(
                 : null;
         UUID ownerId = field.getOwner() != null ? field.getOwner().getId() : null;
         UUID reviewedById = field.getReviewedBy() != null ? field.getReviewedBy().getId() : null;
+        String photoUrl = field.getPhotoFilename() != null && !field.getPhotoFilename().isBlank()
+                ? "/api/v1/fields/" + field.getId() + "/photo"
+                : null;
 
         return new FieldResponse(
                 field.getId(),
@@ -63,6 +67,7 @@ public record FieldResponse(
                 field.getOpenTime(),
                 field.getCloseTime(),
                 field.getStatus(),
+                photoUrl,
                 reviewedById,
                 field.getCreatedAt()
         );

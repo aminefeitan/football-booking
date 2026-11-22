@@ -75,6 +75,9 @@ public class Field extends BaseEntity {
     @Column(nullable = false, length = 20)
     private FieldStatus status = FieldStatus.PENDING;
 
+    @Column(name = "photo_filename", length = 100)
+    private String photoFilename;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "reviewed_by_id")
     private User reviewedBy;
@@ -240,6 +243,14 @@ public class Field extends BaseEntity {
 
     public void setStatus(FieldStatus status) {
         this.status = status;
+    }
+
+    public String getPhotoFilename() {
+        return photoFilename;
+    }
+
+    public void setPhotoFilename(String photoFilename) {
+        this.photoFilename = photoFilename;
     }
 
     public User getReviewedBy() {

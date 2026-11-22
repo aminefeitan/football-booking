@@ -1,5 +1,12 @@
 import { api } from "@/lib/api";
-import type { ManagerStats, AdminStats, User, UserStatus, Role } from "@/lib/types";
+import type {
+  ManagerStats,
+  AdminStats,
+  User,
+  UserStatus,
+  CreateFieldManagerRequest,
+  CreatedUserResponse,
+} from "@/lib/types";
 
 export async function getManagerStats(from?: string, to?: string): Promise<ManagerStats> {
   const params = new URLSearchParams();
@@ -13,8 +20,9 @@ export async function getAdminStats(): Promise<AdminStats> {
   return api<AdminStats>("/stats/admin");
 }
 
-export async function getAdminUsers(): Promise<User[]> {
-  return api<User[]>("/admin/users");
+export async function getAdminUsers(role?: string): Promise<User[]> {
+  const query = role ? `?role=${encodeURIComponent(role)}` : "";
+  return api<User[]>(`/admin/users${query}`);
 }
 
 export async function updateUserStatus(id: string, status: UserStatus): Promise<User> {
@@ -24,9 +32,15 @@ export async function updateUserStatus(id: string, status: UserStatus): Promise<
   });
 }
 
-export async function updateUserRole(id: string, role: Role): Promise<User> {
-  return api<User>(`/admin/users/${id}/role`, {
-    method: "PATCH",
-    body: { role },
+export async function createFieldManager(data: CreateFieldManagerRequest): Promise<CreatedUserResponse> {
+  return api<CreatedUserResponse>("/admin/users/field-managers", {
+    method: "POST",
+    body: data,
+  });
+}
+
+export async function resetUserPassword(id: string): Promise<CreatedUserResponse> {
+  return api<CreatedUserResponse>(`/admin/users/${id}/reset-password`, {
+    method: "POST",
   });
 }

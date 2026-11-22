@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/Button";
 import { getFields, type FieldFilters } from "@/services/fields.service";
 import { cn } from "@/lib/utils";
 import { MOROCCAN_CITIES } from "@/lib/constants";
+import { ProtectedRoute } from "@/context/AuthContext";
 
 const CITY_OPTIONS = [
   { value: "", label: "Toutes les villes" },
@@ -352,8 +353,10 @@ export const dynamic = "force-dynamic";
 
 export default function TerrainsPage() {
   return (
-    <Suspense>
-      <TerrainsContent />
-    </Suspense>
+    <ProtectedRoute>
+      <Suspense>
+        <TerrainsContent />
+      </Suspense>
+    </ProtectedRoute>
   );
 }

@@ -1,4 +1,4 @@
-import { api } from "@/lib/api";
+import { api, API_BASE, getStoredToken } from "@/lib/api";
 import type { Field, FieldStatus, SlotStatus } from "@/lib/types";
 
 export interface FieldFilters {
@@ -42,6 +42,38 @@ export async function updateField(id: string, data: Partial<Field>): Promise<Fie
   return api<Field>(`/fields/${id}`, { method: "PUT", body: data });
 }
 
+export async function uploadFieldPhoto(fieldId: string, file: File): Promise<Field> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const token = getStoredToken();
+  const headers: Record<string, string> = {};
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  const res = await fetch(`${API_BASE}/fields/${fieldId}/photo`, {
+    method: "PUT",
+    headers,
+    body: formData,
+  });
+
+  if (!res.ok) {
+    let msg = "Erreur lors du téléchargement de la photo";
+    try {
+      const err = await res.json();
+      if (err.message) msg = err.message;
+    } catch {}
+    throw new Error(msg);
+  }
+
+  return res.json();
+}
+
+export async function deleteFieldPhoto(fieldId: string): Promise<void> {
+  await api(`/fields/${fieldId}/photo`, { method: "DELETE" });
+}
+
 export async function getAdminFields(status?: FieldStatus): Promise<Field[]> {
   const query = status ? `?status=${encodeURIComponent(status)}` : "?status=PENDING";
   return api<Field[]>(`/admin/fields${query}`);
@@ -53,3 +85,4 @@ export async function reviewField(id: string, status: FieldStatus): Promise<Fiel
     body: { status },
   });
 }
+
