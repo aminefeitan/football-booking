@@ -8,14 +8,15 @@ import {
   Calendar,
   Clock,
   MapPin,
-  XCircle,
   CheckCircle,
   WarningCircle,
-  ArrowsClockwise,
+  SoccerBall,
+  Plus,
 } from "@phosphor-icons/react";
 import { useAuth, ProtectedRoute } from "@/context/AuthContext";
 import { getMyBookings, cancelBooking } from "@/services/bookings.service";
 import { Button } from "@/components/ui/Button";
+import { Badge } from "@/components/ui/Badge";
 import { formatDateTime, formatDate, money } from "@/lib/format";
 import type { Booking, BookingStatus } from "@/lib/types";
 
@@ -32,7 +33,7 @@ export default function MesReservationsPage() {
   const [activeTab, setActiveTab] = useState<BookingStatus | "ALL">("ALL");
   const [feedback, setFeedback] = useState<{ text: string; error?: boolean } | null>(null);
 
-  const { data: bookings = [], isLoading, refetch } = useQuery({
+  const { data: bookings = [], isLoading } = useQuery({
     queryKey: ["my-bookings"],
     queryFn: getMyBookings,
   });
@@ -56,48 +57,50 @@ export default function MesReservationsPage() {
 
   return (
     <ProtectedRoute allowedRoles={["PLAYER"]}>
-      <div className="min-h-screen bg-nuit-pelouse pb-20">
-        <div className="max-w-5xl mx-auto px-4 py-8 space-y-6">
+      <div className="min-h-screen bg-nuit-pelouse pb-24 text-craie">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10 space-y-8">
+          {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-            <div>
-              <div className="font-mono text-xs uppercase tracking-widest text-vert-projecteur mb-1">
+            <div className="space-y-2">
+              <div className="inline-flex items-center gap-2 font-mono text-xs uppercase tracking-widest text-vert-projecteur bg-vert-projecteur/10 px-3 py-1 rounded-full border border-vert-projecteur/20">
                 Historique des réservations
               </div>
-              <h1 className="font-display font-black text-4xl sm:text-5xl uppercase tracking-tight text-craie">
+              <h1 className="font-display font-black text-3xl sm:text-5xl uppercase tracking-tight text-craie">
                 Mes <span className="text-vert-projecteur">Réservations</span>
               </h1>
             </div>
             <Link
               href="/matches"
-              className="px-4 py-2 border-2 border-vert-projecteur bg-vert-projecteur text-encre font-mono text-xs font-bold uppercase tracking-wider shadow-brutal hover:bg-vert-projecteur/90 transition-colors shrink-0"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-vert-projecteur text-encre font-mono text-xs font-bold uppercase tracking-wider shadow-lg shadow-vert-projecteur/20 hover:bg-vert-projecteur/90 transition-all shrink-0"
             >
-              Nouveau Match & Réservation
+              <Plus size={16} weight="bold" />
+              <span>Nouveau Match</span>
             </Link>
           </div>
 
           {feedback && (
             <div
-              className={`p-3 border-2 font-mono text-xs flex items-center gap-2 ${
+              className={`p-4 rounded-2xl border font-mono text-xs flex items-center gap-3 backdrop-blur-md ${
                 feedback.error
-                  ? "border-orange-sifflet bg-orange-sifflet/10 text-orange-sifflet"
-                  : "border-vert-projecteur bg-vert-projecteur/10 text-vert-projecteur"
+                  ? "border-orange-sifflet/40 bg-orange-sifflet/10 text-orange-sifflet"
+                  : "border-vert-projecteur/40 bg-vert-projecteur/10 text-vert-projecteur"
               }`}
             >
-              {feedback.error ? <WarningCircle size={16} /> : <CheckCircle size={16} />}
-              <span>{feedback.text}</span>
+              {feedback.error ? <WarningCircle size={20} weight="bold" /> : <CheckCircle size={20} weight="bold" />}
+              <span className="font-sans text-sm">{feedback.text}</span>
             </div>
           )}
 
-          {/* Onglets Filtres */}
-          <div className="flex flex-wrap gap-1.5 border-b-2 border-encre pb-2">
+          {/* Filter Tabs */}
+          <div className="flex flex-wrap gap-2 p-1.5 rounded-2xl bg-encre/60 border border-craie/10 backdrop-blur-xl max-w-fit">
             {TABS.map((tab) => (
               <button
                 key={tab.value}
                 onClick={() => setActiveTab(tab.value)}
-                className={`px-3 py-1.5 font-mono text-xs font-bold uppercase tracking-wider border-2 transition-colors cursor-pointer ${
+                className={`px-3.5 py-1.5 rounded-xl font-mono text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer ${
                   activeTab === tab.value
-                    ? "border-vert-projecteur bg-vert-projecteur text-encre shadow-brutal"
-                    : "border-transparent text-craie/60 hover:text-craie hover:bg-encre"
+                    ? "bg-vert-projecteur text-encre shadow-sm"
+                    : "text-craie/60 hover:text-craie hover:bg-craie/5"
                 }`}
               >
                 {tab.label}
@@ -105,13 +108,13 @@ export default function MesReservationsPage() {
             ))}
           </div>
 
-          {/* Liste */}
+          {/* Bookings List */}
           {isLoading ? (
-            <div className="text-center py-12 font-mono text-sm text-craie/40 animate-pulse">
+            <div className="text-center py-16 font-mono text-sm text-craie/40 animate-pulse">
               Chargement de vos réservations…
             </div>
           ) : filteredBookings.length === 0 ? (
-            <div className="border-2 border-dashed border-craie/20 p-12 text-center bg-encre/40 space-y-3">
+            <div className="rounded-3xl border border-dashed border-craie/20 p-16 text-center bg-encre/40 space-y-4">
               <Ticket size={48} className="mx-auto text-craie/30" />
               <p className="font-mono text-sm text-craie/70 font-semibold">
                 Aucune réservation trouvée dans cette catégorie.
@@ -130,32 +133,30 @@ export default function MesReservationsPage() {
                   (b.status === "PENDING" || b.status === "CONFIRMED") &&
                   new Date(b.startAt).getTime() > Date.now();
 
-                const statusColor =
-                  b.status === "CONFIRMED"
-                    ? "border-vert-projecteur text-vert-projecteur bg-vert-projecteur/10"
-                    : b.status === "PENDING"
-                    ? "border-jaune-carton text-jaune-carton bg-jaune-carton/10"
-                    : "border-orange-sifflet text-orange-sifflet bg-orange-sifflet/10";
-
-                const statusLabel =
-                  b.status === "CONFIRMED"
-                    ? "Confirmée"
-                    : b.status === "PENDING"
-                    ? "En attente"
-                    : b.status === "REJECTED"
-                    ? "Refusée"
-                    : "Annulée";
-
                 return (
                   <div
                     key={b.id}
-                    className="border-2 border-encre bg-encre shadow-brutal p-5 flex flex-col md:flex-row md:items-center justify-between gap-4"
+                    className="rounded-3xl border border-craie/10 bg-encre/80 backdrop-blur-xl p-6 flex flex-col md:flex-row md:items-center justify-between gap-6 hover:border-craie/20 transition-all shadow-xl shadow-black/10"
                   >
                     <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <span className={`font-mono text-[10px] px-2 py-0.5 border font-bold uppercase ${statusColor}`}>
-                          {statusLabel}
-                        </span>
+                      <div className="flex items-center gap-2.5">
+                        <Badge
+                          variant={
+                            b.status === "CONFIRMED"
+                              ? "confirmed"
+                              : b.status === "PENDING"
+                              ? "pending"
+                              : "cancelled"
+                          }
+                        >
+                          {b.status === "CONFIRMED"
+                            ? "Confirmée"
+                            : b.status === "PENDING"
+                            ? "En attente"
+                            : b.status === "REJECTED"
+                            ? "Refusée"
+                            : "Annulée"}
+                        </Badge>
                         <span className="font-mono text-xs text-craie/40">
                           Demande du {formatDate(b.createdAt)}
                         </span>
@@ -176,7 +177,7 @@ export default function MesReservationsPage() {
                       </div>
 
                       {b.notes && (
-                        <p className="font-body text-xs text-craie/50 italic">
+                        <p className="font-sans text-xs text-craie/50 italic">
                           Notes : « {b.notes} »
                         </p>
                       )}
@@ -195,7 +196,7 @@ export default function MesReservationsPage() {
                           size="sm"
                           onClick={() => cancelMut.mutate(b.id)}
                           loading={cancelMut.isPending}
-                          className="text-orange-sifflet hover:bg-orange-sifflet/10 border border-orange-sifflet/40"
+                          className="text-orange-sifflet hover:bg-orange-sifflet/10 border border-orange-sifflet/30"
                         >
                           Annuler la réservation
                         </Button>

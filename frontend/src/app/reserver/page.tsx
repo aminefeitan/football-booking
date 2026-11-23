@@ -12,14 +12,16 @@ import {
   MapPin,
   CheckCircle,
   WarningCircle,
-  ArrowLeft,
   Trophy,
+  ArrowRight,
+  ShieldCheck,
 } from "@phosphor-icons/react";
 import { useAuth, ProtectedRoute } from "@/context/AuthContext";
 import { getFields, getFieldById, getFieldSlots } from "@/services/fields.service";
 import { getMyMatches, getMatchById } from "@/services/matches.service";
 import { createBooking } from "@/services/bookings.service";
 import { Button } from "@/components/ui/Button";
+import { Badge } from "@/components/ui/Badge";
 import { formatDateTime, formatDate, money } from "@/lib/format";
 import type { Field, Match } from "@/lib/types";
 
@@ -96,22 +98,26 @@ function ReserverContent() {
   if (successBookingId) {
     return (
       <div className="min-h-screen bg-nuit-pelouse flex items-center justify-center p-4">
-        <div className="border-2 border-encre bg-encre max-w-md w-full p-8 shadow-brutal text-center space-y-5">
-          <div className="w-16 h-16 border-2 border-vert-projecteur bg-vert-projecteur/15 text-vert-projecteur flex items-center justify-center mx-auto">
-            <CheckCircle size={36} weight="fill" />
+        <div className="rounded-3xl border border-vert-projecteur/30 bg-encre/95 backdrop-blur-2xl max-w-md w-full p-8 shadow-2xl text-center space-y-6">
+          <div className="w-20 h-20 rounded-full border border-vert-projecteur/40 bg-vert-projecteur/10 text-vert-projecteur flex items-center justify-center mx-auto shadow-lg shadow-vert-projecteur/20">
+            <CheckCircle size={44} weight="fill" />
           </div>
-          <h1 className="font-display font-black text-3xl uppercase text-craie">
-            Réservation <span className="text-vert-projecteur">Envoyée</span> !
-          </h1>
-          <p className="font-mono text-xs text-craie/60">
-            Votre demande a été transmise au gérant du terrain. Elle est actuellement en attente de confirmation.
-          </p>
-          <div className="flex gap-3 justify-center pt-2">
+          <div className="space-y-2">
+            <h1 className="font-display font-black text-3xl uppercase text-craie">
+              Réservation <span className="text-vert-projecteur">Transmise</span> !
+            </h1>
+            <p className="text-xs font-sans text-craie/70 leading-relaxed">
+              Votre demande a été envoyée au gérant du terrain. Vous recevrez une confirmation dès validation de votre créneau.
+            </p>
+          </div>
+
+          <div className="pt-2">
             <Link
               href="/mes-reservations"
-              className="px-4 py-2 border-2 border-vert-projecteur bg-vert-projecteur text-encre font-mono text-xs font-bold uppercase tracking-wider shadow-brutal hover:bg-vert-projecteur/90 transition-colors"
+              className="inline-flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-vert-projecteur text-encre font-mono text-xs font-bold uppercase tracking-wider shadow-lg shadow-vert-projecteur/20 hover:bg-vert-projecteur/90 transition-all"
             >
-              Voir mes réservations
+              <span>Accéder à mes réservations</span>
+              <ArrowRight size={16} weight="bold" />
             </Link>
           </div>
         </div>
@@ -120,33 +126,33 @@ function ReserverContent() {
   }
 
   return (
-    <div className="min-h-screen bg-nuit-pelouse pb-20">
-      <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
-        <div>
-          <div className="font-mono text-xs uppercase tracking-widest text-vert-projecteur mb-1">
-            Réservation Officielle
+    <div className="min-h-screen bg-nuit-pelouse pb-24 text-craie">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-10 space-y-8">
+        <div className="space-y-2">
+          <div className="inline-flex items-center gap-2 font-mono text-xs uppercase tracking-widest text-vert-projecteur bg-vert-projecteur/10 px-3 py-1 rounded-full border border-vert-projecteur/20">
+            Processus de Réservation
           </div>
-          <h1 className="font-display font-black text-4xl sm:text-5xl uppercase tracking-tight text-craie">
+          <h1 className="font-display font-black text-3xl sm:text-5xl uppercase tracking-tight text-craie">
             Réserver un <span className="text-vert-projecteur">Terrain</span>
           </h1>
-          <p className="font-mono text-xs text-craie/60 mt-1">
-            Associez un terrain disponible à l'un de vos matchs planifiés.
+          <p className="font-sans text-sm text-craie/70">
+            Associez un complexe sportif disponible à l'un de vos matchs planifiés.
           </p>
         </div>
 
         {errorMsg && (
-          <div className="p-3 border-2 border-orange-sifflet bg-orange-sifflet/10 text-orange-sifflet font-mono text-xs flex items-center gap-2">
-            <WarningCircle size={18} weight="bold" />
-            <span>{errorMsg}</span>
+          <div className="p-4 rounded-2xl border border-orange-sifflet/40 bg-orange-sifflet/10 text-orange-sifflet font-mono text-xs flex items-center gap-3">
+            <WarningCircle size={20} weight="bold" />
+            <span className="font-sans text-sm">{errorMsg}</span>
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Étape 1 : Choisir le match */}
-          <div className="border-2 border-encre bg-encre p-5 shadow-brutal space-y-3">
-            <div className="flex items-center gap-2 border-b border-encre/60 pb-2">
-              <Trophy size={18} weight="bold" className="text-vert-projecteur" />
-              <h2 className="font-mono text-xs font-bold uppercase tracking-wider text-craie">
+          <div className="rounded-3xl border border-craie/10 bg-encre/70 backdrop-blur-xl p-6 sm:p-8 space-y-4 shadow-xl">
+            <div className="flex items-center gap-3 border-b border-craie/10 pb-3">
+              <Trophy size={20} weight="bold" className="text-vert-projecteur" />
+              <h2 className="font-display font-black text-xl uppercase tracking-wide text-craie">
                 1. Sélectionner le match à disputer
               </h2>
             </div>
@@ -154,19 +160,19 @@ function ReserverContent() {
             {loadingMatches ? (
               <p className="font-mono text-xs text-craie/40 animate-pulse">Chargement de vos matchs…</p>
             ) : plannedMatches.length === 0 ? (
-              <div className="p-4 bg-nuit-pelouse border border-encre/60 text-center space-y-2">
-                <p className="font-mono text-xs text-craie/60">
+              <div className="p-6 rounded-2xl bg-nuit-pelouse/60 border border-craie/10 text-center space-y-3">
+                <p className="font-sans text-sm text-craie/70">
                   Vous n'avez aucun match planifié prêt pour réservation.
                 </p>
                 <Link
                   href="/matches"
-                  className="inline-block font-mono text-xs font-bold uppercase text-vert-projecteur hover:underline"
+                  className="inline-flex items-center gap-2 font-mono text-xs font-bold uppercase text-vert-projecteur hover:underline"
                 >
                   Organiser un match d'abord →
                 </Link>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 {plannedMatches.map((m: Match) => {
                   const selected = selectedMatchId === m.id;
                   return (
@@ -174,17 +180,18 @@ function ReserverContent() {
                       key={m.id}
                       type="button"
                       onClick={() => setSelectedMatchId(m.id)}
-                      className={`text-left p-3.5 border-2 transition-colors cursor-pointer ${
+                      className={`text-left p-4 rounded-2xl border transition-all cursor-pointer ${
                         selected
-                          ? "border-vert-projecteur bg-vert-projecteur/15 text-craie shadow-brutal"
-                          : "border-encre/60 bg-nuit-pelouse text-craie/60 hover:text-craie hover:border-craie/40"
+                          ? "border-vert-projecteur bg-vert-projecteur/15 text-craie shadow-lg shadow-vert-projecteur/10"
+                          : "border-craie/10 bg-nuit-pelouse/40 text-craie/70 hover:border-craie/30"
                       }`}
                     >
                       <div className="font-display font-black text-lg uppercase text-craie">
-                        {m.homeTeamName} vs {m.awayTeamName}
+                        {m.homeTeamName} <span className="text-orange-sifflet text-sm">VS</span> {m.awayTeamName}
                       </div>
-                      <div className="font-mono text-xs text-craie/50 mt-1 flex items-center gap-1">
-                        <Calendar size={12} /> {formatDateTime(m.startAt)} · {m.durationMinutes} min
+                      <div className="font-mono text-xs text-craie/50 mt-1 flex items-center gap-2">
+                        <Calendar size={14} className="text-vert-projecteur" />
+                        <span>{formatDateTime(m.startAt)} · {m.durationMinutes} min</span>
                       </div>
                     </button>
                   );
@@ -194,18 +201,18 @@ function ReserverContent() {
           </div>
 
           {/* Étape 2 : Choisir le terrain */}
-          <div className="border-2 border-encre bg-encre p-5 shadow-brutal space-y-3">
-            <div className="flex items-center gap-2 border-b border-encre/60 pb-2">
-              <SoccerBall size={18} weight="bold" className="text-vert-projecteur" />
-              <h2 className="font-mono text-xs font-bold uppercase tracking-wider text-craie">
-                2. Choisir le terrain (Terrains Approuvés)
+          <div className="rounded-3xl border border-craie/10 bg-encre/70 backdrop-blur-xl p-6 sm:p-8 space-y-4 shadow-xl">
+            <div className="flex items-center gap-3 border-b border-craie/10 pb-3">
+              <SoccerBall size={20} weight="bold" className="text-vert-projecteur" />
+              <h2 className="font-display font-black text-xl uppercase tracking-wide text-craie">
+                2. Choisir le terrain
               </h2>
             </div>
 
             {loadingFields ? (
               <p className="font-mono text-xs text-craie/40 animate-pulse">Chargement des terrains…</p>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
                 {fields.map((f: Field) => {
                   const selected = selectedFieldId === f.id;
                   return (
@@ -213,20 +220,21 @@ function ReserverContent() {
                       key={f.id}
                       type="button"
                       onClick={() => setSelectedFieldId(f.id)}
-                      className={`text-left p-3.5 border-2 transition-colors cursor-pointer ${
+                      className={`text-left p-4 rounded-2xl border transition-all cursor-pointer ${
                         selected
-                          ? "border-vert-projecteur bg-vert-projecteur/15 text-craie shadow-brutal"
-                          : "border-encre/60 bg-nuit-pelouse text-craie/60 hover:text-craie hover:border-craie/40"
+                          ? "border-vert-projecteur bg-vert-projecteur/15 text-craie shadow-lg shadow-vert-projecteur/10"
+                          : "border-craie/10 bg-nuit-pelouse/40 text-craie/70 hover:border-craie/30"
                       }`}
                     >
-                      <div className="font-display font-black text-lg uppercase text-craie truncate">
+                      <div className="font-display font-black text-base uppercase text-craie truncate">
                         {f.name}
                       </div>
-                      <div className="font-mono text-xs text-craie/50 flex items-center gap-1 mt-0.5">
-                        <MapPin size={12} /> {f.city} · {f.fieldType}
+                      <div className="font-mono text-xs text-craie/50 flex items-center gap-1 mt-1">
+                        <MapPin size={12} className="text-vert-projecteur" />
+                        <span>{f.city} · {f.fieldType}</span>
                       </div>
                       <div className="font-mono text-xs font-bold text-vert-projecteur mt-2">
-                        {money(f.pricePerHour, f.currency)} / heure
+                        {money(f.pricePerHour, f.currency)} / h
                       </div>
                     </button>
                   );
@@ -235,56 +243,36 @@ function ReserverContent() {
             )}
           </div>
 
-          {/* Étape 3 : Créneaux à la date du match & récapitulatif */}
+          {/* Étape 3 : Récapitulatif & Notes */}
           {selectedMatch && selectedField && (
-            <div className="border-2 border-encre bg-encre p-5 shadow-brutal space-y-4">
-              <div className="flex items-center gap-2 border-b border-encre/60 pb-2">
-                <Clock size={18} weight="bold" className="text-vert-projecteur" />
-                <h2 className="font-mono text-xs font-bold uppercase tracking-wider text-craie">
-                  3. Disponibilité du terrain & Notes
+            <div className="rounded-3xl border border-craie/10 bg-encre/80 backdrop-blur-xl p-6 sm:p-8 space-y-6 shadow-xl">
+              <div className="flex items-center gap-3 border-b border-craie/10 pb-3">
+                <Clock size={20} weight="bold" className="text-vert-projecteur" />
+                <h2 className="font-display font-black text-xl uppercase tracking-wide text-craie">
+                  3. Récapitulatif & Instructions
                 </h2>
               </div>
 
-              <div className="p-3 bg-nuit-pelouse border-2 border-encre text-xs font-mono space-y-1">
-                <div>
-                  <span className="text-craie/50">Horaires d'ouverture :</span>{" "}
-                  <span className="text-craie font-bold">{selectedField.openTime} - {selectedField.closeTime}</span>
+              {/* Summary Box */}
+              <div className="p-4 rounded-2xl bg-nuit-pelouse/80 border border-craie/10 space-y-2 text-xs font-mono">
+                <div className="flex justify-between">
+                  <span className="text-craie/50">Terrain :</span>
+                  <span className="font-bold text-craie">{selectedField.name} ({selectedField.city})</span>
                 </div>
-                <div>
-                  <span className="text-craie/50">Créneau du match :</span>{" "}
+                <div className="flex justify-between">
+                  <span className="text-craie/50">Créneau du match :</span>
                   <span className="text-vert-projecteur font-bold">{formatDateTime(selectedMatch.startAt)} ({selectedMatch.durationMinutes} min)</span>
                 </div>
-                <div>
-                  <span className="text-craie/50">Montant total estimé :</span>{" "}
-                  <span className="text-jaune-carton font-bold">
+                <div className="flex justify-between border-t border-craie/10 pt-2 text-sm">
+                  <span className="text-craie/70 font-semibold">Montant total estimé :</span>
+                  <span className="text-jaune-carton font-black">
                     {money((selectedField.pricePerHour * selectedMatch.durationMinutes) / 60, selectedField.currency)}
                   </span>
                 </div>
               </div>
 
-              {slots.length > 0 && (
-                <div className="space-y-1.5">
-                  <span className="font-mono text-[11px] uppercase tracking-wider text-craie/60 block">
-                    Grille horaire du jour ({matchDateStr}) :
-                  </span>
-                  <div className="flex flex-wrap gap-1.5">
-                    {slots.map((s, idx) => (
-                      <span
-                        key={idx}
-                        className={`font-mono text-[10px] px-2 py-0.5 border ${
-                          s.status === "available"
-                            ? "border-vert-projecteur/40 text-vert-projecteur bg-vert-projecteur/10"
-                            : "border-craie/20 text-craie/30 bg-encre"
-                        }`}
-                      >
-                        {s.time} ({s.status === "available" ? "libre" : "occupé"})
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div className="space-y-1">
+              {/* Notes */}
+              <div className="space-y-1.5">
                 <label className="font-mono text-xs uppercase text-craie/60 block">
                   Remarques ou consignes pour le gérant (optionnel)
                 </label>
@@ -292,17 +280,18 @@ function ReserverContent() {
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   rows={2}
-                  placeholder="Ex: besoin de chasubles, ballon fourni…"
-                  className="w-full border-2 border-encre/60 bg-nuit-pelouse text-craie px-3 py-2 text-sm outline-none focus:border-vert-projecteur resize-none"
+                  placeholder="Ex : Besoin de chasubles, ballons fournis…"
+                  className="w-full rounded-xl border border-craie/15 bg-nuit-pelouse text-craie px-3.5 py-2.5 text-sm outline-none focus:border-vert-projecteur resize-none"
                 />
               </div>
 
               <div className="pt-2">
                 <Button
                   type="submit"
-                  variant="primary"
+                  variant="booking"
+                  size="lg"
                   loading={bookMut.isPending}
-                  className="w-full sm:w-auto shadow-brutal"
+                  className="w-full sm:w-auto shadow-lg shadow-vert-projecteur/25"
                 >
                   Envoyer la demande de réservation
                 </Button>

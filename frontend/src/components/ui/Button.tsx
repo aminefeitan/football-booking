@@ -16,21 +16,21 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variantClasses: Record<ButtonVariant, string> = {
   primary:
-    "bg-vert-projecteur text-encre border-2 border-encre shadow-brutal hover:shadow-[2px_2px_0_#0A0F0D] hover:translate-x-[2px] hover:translate-y-[2px] active:shadow-none active:translate-x-[4px] active:translate-y-[4px]",
+    "bg-vert-projecteur text-encre font-bold shadow-md hover:shadow-lg hover:shadow-vert-projecteur/20 hover:brightness-105 active:scale-[0.98] border border-vert-projecteur",
   secondary:
-    "bg-orange-sifflet text-craie border-2 border-encre shadow-brutal hover:shadow-[2px_2px_0_#0A0F0D] hover:translate-x-[2px] hover:translate-y-[2px] active:shadow-none active:translate-x-[4px] active:translate-y-[4px]",
+    "bg-orange-sifflet text-craie font-bold shadow-md hover:shadow-lg hover:shadow-orange-sifflet/20 hover:brightness-105 active:scale-[0.98] border border-orange-sifflet",
   ghost:
-    "bg-transparent text-craie border-2 border-craie/40 hover:border-craie hover:bg-craie/5",
+    "bg-transparent text-craie border border-craie/20 hover:border-craie/60 hover:bg-craie/5 active:scale-[0.98]",
   danger:
-    "bg-red-600 text-white border-2 border-encre shadow-brutal hover:shadow-[2px_2px_0_#0A0F0D] hover:translate-x-[2px] hover:translate-y-[2px]",
+    "bg-red-600/90 hover:bg-red-600 text-white shadow-md hover:shadow-red-600/20 active:scale-[0.98] border border-red-500",
   booking:
-    "bg-vert-projecteur text-encre border-2 border-encre shadow-brutal hover:shadow-[2px_2px_0_#0A0F0D] hover:translate-x-[2px] hover:translate-y-[2px] active:shadow-none",
+    "bg-vert-projecteur text-encre font-black shadow-md hover:shadow-xl hover:shadow-vert-projecteur/30 hover:brightness-105 active:scale-[0.98] border border-vert-projecteur",
 };
 
 const sizeClasses: Record<ButtonSize, string> = {
-  sm:  "px-3 py-1.5 text-xs font-bold",
-  md:  "px-4 py-2   text-sm font-bold",
-  lg:  "px-5 py-2.5 text-base font-bold",
+  sm:  "px-3 py-1.5 text-xs rounded-lg",
+  md:  "px-4 py-2.5 text-sm rounded-xl",
+  lg:  "px-6 py-3.5 text-base rounded-xl",
 };
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(

@@ -14,6 +14,7 @@ import {
   House,
   ArrowsDownUp,
   MapPin,
+  SoccerBall,
 } from "@phosphor-icons/react";
 import { FieldCard } from "@/components/ui/FieldCard";
 import { Button } from "@/components/ui/Button";
@@ -36,9 +37,9 @@ const FORMAT_OPTIONS = [
 
 const PRICE_OPTIONS = [
   { value: 0, label: "Tous prix" },
-  { value: 60, label: "≤ 60€/h" },
-  { value: 90, label: "≤ 90€/h" },
-  { value: 120, label: "≤ 120€/h" },
+  { value: 300, label: "≤ 300 MAD/h" },
+  { value: 450, label: "≤ 450 MAD/h" },
+  { value: 600, label: "≤ 600 MAD/h" },
 ];
 
 function TerrainsContent() {
@@ -69,7 +70,6 @@ function TerrainsContent() {
     queryFn: () => getFields(queryFilters),
   });
 
-  // Tri côté client
   const sortedFields = useMemo(() => {
     const list = [...rawFields];
     if (sortBy === "price-asc") {
@@ -98,33 +98,36 @@ function TerrainsContent() {
   };
 
   return (
-    <div className="min-h-screen bg-nuit-pelouse text-craie pb-16">
-      {/* ── Entête de page ─────────────────────────────────────────── */}
-      <div className="border-b-2 border-encre bg-encre/70 py-6 px-4">
-        <div className="max-w-6xl mx-auto flex flex-col md:flex-row md:items-end justify-between gap-4">
-          <div>
-            <div className="font-mono text-xs uppercase tracking-widest text-vert-projecteur mb-1">
+    <div className="min-h-screen bg-nuit-pelouse text-craie pb-24">
+      {/* ── Page Header ─────────────────────────────────────────── */}
+      <div className="border-b border-craie/10 bg-encre/60 backdrop-blur-xl py-10 px-4 sm:px-6">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-end justify-between gap-6">
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-2 font-mono text-xs uppercase tracking-widest text-vert-projecteur bg-vert-projecteur/10 px-3 py-1 rounded-full border border-vert-projecteur/20">
               Catalogue officiel · FootBook
             </div>
-            <h1 className="font-display text-4xl md:text-5xl font-black uppercase text-craie tracking-tight leading-none">
+            <h1 className="font-display text-4xl sm:text-6xl font-black uppercase text-craie tracking-tight leading-none">
               Trouver un <span className="text-vert-projecteur">terrain</span>
             </h1>
+            <p className="text-sm text-craie/70 font-sans max-w-xl">
+              Parcourez les meilleures pelouses synthétiques et indoor disponibles près de chez vous.
+            </p>
           </div>
 
           <div className="flex items-center gap-3">
-            <span className="font-mono text-xs text-craie/60 bg-encre border border-craie/20 px-3 py-1.5">
-              <strong className="text-vert-projecteur font-black">{sortedFields.length}</strong> terrain(s) disponible(s)
-            </span>
+            <div className="rounded-xl border border-craie/15 bg-encre/70 px-4 py-2 font-mono text-xs text-craie/70">
+              <strong className="text-vert-projecteur font-black text-sm">{sortedFields.length}</strong> terrain(s) trouvé(s)
+            </div>
 
-            {/* Vue toggle */}
-            <div className="border-2 border-encre bg-encre flex">
+            {/* Toggle View Mode */}
+            <div className="rounded-xl border border-craie/15 bg-encre/70 p-1 flex items-center">
               <button
                 onClick={() => setViewMode("grid")}
                 className={cn(
-                  "p-2 transition-colors",
+                  "p-2 rounded-lg transition-colors cursor-pointer",
                   viewMode === "grid"
                     ? "bg-vert-projecteur text-encre"
-                    : "text-craie/40 hover:text-craie"
+                    : "text-craie/50 hover:text-craie"
                 )}
                 title="Vue grille"
                 aria-label="Vue grille"
@@ -134,10 +137,10 @@ function TerrainsContent() {
               <button
                 onClick={() => setViewMode("list")}
                 className={cn(
-                  "p-2 transition-colors",
+                  "p-2 rounded-lg transition-colors cursor-pointer",
                   viewMode === "list"
                     ? "bg-vert-projecteur text-encre"
-                    : "text-craie/40 hover:text-craie"
+                    : "text-craie/50 hover:text-craie"
                 )}
                 title="Vue liste"
                 aria-label="Vue liste"
@@ -149,18 +152,17 @@ function TerrainsContent() {
         </div>
       </div>
 
-      {/* ── Barre de Filtres Structurée et Ordonnée ─────────────────── */}
-      <div className="border-b-2 border-encre bg-encre/40 px-4 py-4">
-        <div className="max-w-6xl mx-auto space-y-3">
-          {/* Ligne 1 : Recherche ville + Tri */}
+      {/* ── Filter Bar ─────────────────────────────────────────────── */}
+      <div className="border-b border-craie/10 bg-encre/40 backdrop-blur-md px-4 sm:px-6 py-5">
+        <div className="max-w-7xl mx-auto space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            {/* Select Ville */}
-            <div className="md:col-span-2 flex items-center border-2 border-encre bg-encre px-3 py-2 shadow-brutal focus-within:border-vert-projecteur transition-colors">
-              <MapPin size={16} weight="bold" className="text-vert-projecteur shrink-0 mr-2" />
+            {/* City Selector */}
+            <div className="md:col-span-2 flex items-center rounded-2xl border border-craie/15 bg-encre/80 px-4 py-2.5 focus-within:border-vert-projecteur/50 transition-all">
+              <MapPin size={18} weight="bold" className="text-vert-projecteur shrink-0 mr-3" />
               <select
                 value={searchCity}
                 onChange={(e) => setSearchCity(e.target.value)}
-                className="w-full bg-transparent text-craie text-sm font-body outline-none cursor-pointer"
+                className="w-full bg-transparent text-craie text-sm font-sans outline-none cursor-pointer"
                 aria-label="Filtrer par ville"
               >
                 {CITY_OPTIONS.map((opt) => (
@@ -171,9 +173,9 @@ function TerrainsContent() {
               </select>
             </div>
 
-            {/* Tri */}
-            <div className="flex items-center border-2 border-encre bg-encre px-3 py-2 shadow-brutal">
-              <ArrowsDownUp size={16} weight="bold" className="text-vert-projecteur shrink-0 mr-2" />
+            {/* Sorting */}
+            <div className="flex items-center rounded-2xl border border-craie/15 bg-encre/80 px-4 py-2.5 focus-within:border-vert-projecteur/50 transition-all">
+              <ArrowsDownUp size={18} weight="bold" className="text-vert-projecteur shrink-0 mr-3" />
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
@@ -193,15 +195,15 @@ function TerrainsContent() {
             </div>
           </div>
 
-          {/* Ligne 2 : Filtres pastilles ordonnés par catégorie */}
-          <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+          {/* Filter Pills */}
+          <div className="flex flex-wrap items-center justify-between gap-4 pt-1">
             <div className="flex flex-wrap items-center gap-4">
-              {/* Groupe 1: FORMAT */}
+              {/* Format */}
               <div className="flex items-center gap-1.5">
                 <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-craie/40 mr-1">
                   Format :
                 </span>
-                <div className="flex flex-wrap gap-1">
+                <div className="flex flex-wrap gap-1.5">
                   {FORMAT_OPTIONS.map((opt) => {
                     const active = format === opt.value;
                     return (
@@ -209,10 +211,10 @@ function TerrainsContent() {
                         key={opt.value}
                         onClick={() => setFormat(opt.value)}
                         className={cn(
-                          "px-2.5 py-1 text-xs font-mono font-bold uppercase tracking-wide border-2 transition-all",
+                          "px-3 py-1 text-xs font-mono font-bold uppercase rounded-xl border transition-all cursor-pointer",
                           active
-                            ? "border-vert-projecteur bg-vert-projecteur text-encre shadow-brutal"
-                            : "border-encre bg-nuit-pelouse text-craie/60 hover:text-craie hover:border-craie/40"
+                            ? "border-vert-projecteur bg-vert-projecteur text-encre shadow-sm shadow-vert-projecteur/20"
+                            : "border-craie/10 bg-craie/5 text-craie/60 hover:text-craie hover:bg-craie/10"
                         )}
                       >
                         {opt.label}
@@ -222,12 +224,12 @@ function TerrainsContent() {
                 </div>
               </div>
 
-              {/* Groupe 2: BUDGET */}
+              {/* Budget */}
               <div className="flex items-center gap-1.5">
                 <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-craie/40 mr-1">
                   Budget :
                 </span>
-                <div className="flex flex-wrap gap-1">
+                <div className="flex flex-wrap gap-1.5">
                   {PRICE_OPTIONS.map((opt) => {
                     const active = maxPrice === opt.value;
                     return (
@@ -235,10 +237,10 @@ function TerrainsContent() {
                         key={opt.value}
                         onClick={() => setMaxPrice(opt.value)}
                         className={cn(
-                          "px-2.5 py-1 text-xs font-mono font-bold uppercase tracking-wide border-2 transition-all",
+                          "px-3 py-1 text-xs font-mono font-bold uppercase rounded-xl border transition-all cursor-pointer",
                           active
-                            ? "border-jaune-carton bg-jaune-carton text-encre shadow-brutal"
-                            : "border-encre bg-nuit-pelouse text-craie/60 hover:text-craie hover:border-craie/40"
+                            ? "border-jaune-carton bg-jaune-carton text-encre shadow-sm shadow-jaune-carton/20"
+                            : "border-craie/10 bg-craie/5 text-craie/60 hover:text-craie hover:bg-craie/10"
                         )}
                       >
                         {opt.label}
@@ -248,48 +250,47 @@ function TerrainsContent() {
                 </div>
               </div>
 
-              {/* Groupe 3: COMMODITÉS */}
+              {/* Amenities */}
               <div className="flex items-center gap-1.5">
                 <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-craie/40 mr-1">
                   Options :
                 </span>
-                <div className="flex gap-1">
+                <div className="flex gap-1.5">
                   <button
                     onClick={() => setIndoorOnly(!indoorOnly)}
                     className={cn(
-                      "flex items-center gap-1 px-2.5 py-1 text-xs font-mono font-bold uppercase tracking-wide border-2 transition-all",
+                      "flex items-center gap-1.5 px-3 py-1 text-xs font-mono font-bold uppercase rounded-xl border transition-all cursor-pointer",
                       indoorOnly
-                        ? "border-orange-sifflet bg-orange-sifflet text-craie shadow-brutal"
-                        : "border-encre bg-nuit-pelouse text-craie/60 hover:text-craie hover:border-craie/40"
+                        ? "border-orange-sifflet bg-orange-sifflet text-craie shadow-sm"
+                        : "border-craie/10 bg-craie/5 text-craie/60 hover:text-craie"
                     )}
                   >
-                    <House size={12} weight="bold" />
+                    <House size={14} weight="bold" />
                     Indoor
                   </button>
 
                   <button
                     onClick={() => setLightsOnly(!lightsOnly)}
                     className={cn(
-                      "flex items-center gap-1 px-2.5 py-1 text-xs font-mono font-bold uppercase tracking-wide border-2 transition-all",
+                      "flex items-center gap-1.5 px-3 py-1 text-xs font-mono font-bold uppercase rounded-xl border transition-all cursor-pointer",
                       lightsOnly
-                        ? "border-vert-projecteur bg-vert-projecteur text-encre shadow-brutal"
-                        : "border-encre bg-nuit-pelouse text-craie/60 hover:text-craie hover:border-craie/40"
+                        ? "border-vert-projecteur bg-vert-projecteur text-encre shadow-sm"
+                        : "border-craie/10 bg-craie/5 text-craie/60 hover:text-craie"
                     )}
                   >
-                    <Lightning size={12} weight="fill" />
+                    <Lightning size={14} weight="fill" />
                     Éclairé
                   </button>
                 </div>
               </div>
             </div>
 
-            {/* Reset si des filtres sont actifs */}
             {activeFiltersCount > 0 && (
               <button
                 onClick={resetAllFilters}
-                className="flex items-center gap-1 text-xs font-mono font-bold text-orange-sifflet hover:underline uppercase tracking-wider transition-colors ml-auto"
+                className="flex items-center gap-1.5 text-xs font-mono font-bold text-orange-sifflet hover:underline uppercase tracking-wider transition-colors ml-auto cursor-pointer"
               >
-                <X size={12} weight="bold" />
+                <X size={14} weight="bold" />
                 Effacer les filtres ({activeFiltersCount})
               </button>
             )}
@@ -297,25 +298,25 @@ function TerrainsContent() {
         </div>
       </div>
 
-      {/* ── Contenu & Résultats ─────────────────────────────────────── */}
-      <div className="max-w-6xl mx-auto px-4 py-8">
+      {/* ── Results Grid ───────────────────────────────────────────── */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10">
         {isLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {Array.from({ length: 6 }).map((_, i) => (
               <div
                 key={i}
-                className="border-2 border-encre bg-encre/30 h-64 animate-pulse shadow-brutal"
+                className="rounded-3xl border border-craie/10 bg-encre/40 h-80 animate-pulse"
               />
             ))}
           </div>
         ) : sortedFields.length === 0 ? (
-          <div className="border-2 border-dashed border-encre/40 p-12 text-center max-w-md mx-auto my-12 bg-encre/20">
-            <div className="font-display font-black text-6xl text-craie/20 mb-2">0</div>
-            <h3 className="font-display text-2xl font-black uppercase text-craie mb-2">
+          <div className="rounded-3xl border border-dashed border-craie/20 p-16 text-center max-w-md mx-auto my-12 bg-encre/30 space-y-4">
+            <SoccerBall size={48} className="mx-auto text-craie/30" />
+            <h3 className="font-display text-2xl font-black uppercase text-craie">
               Aucun terrain correspondant
             </h3>
-            <p className="text-craie/50 text-sm font-body mb-6">
-              Modifie tes critères ou efface les filtres pour voir tous les terrains disponibles.
+            <p className="text-craie/60 text-sm font-sans">
+              Modifiez vos critères ou réinitialisez les filtres pour afficher l'ensemble des terrains disponibles.
             </p>
             <Button variant="primary" size="sm" onClick={resetAllFilters}>
               Réinitialiser les filtres
@@ -334,7 +335,7 @@ function TerrainsContent() {
                 key={field.id}
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, delay: i * 0.04 }}
+                transition={{ duration: 0.3, delay: i * 0.03 }}
               >
                 <FieldCard
                   field={field}

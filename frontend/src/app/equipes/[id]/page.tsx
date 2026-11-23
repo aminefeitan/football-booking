@@ -11,6 +11,7 @@ import {
   ArrowLeft,
   CheckCircle,
   WarningCircle,
+  ShieldCheck,
 } from "@phosphor-icons/react";
 import { useAuth, ProtectedRoute } from "@/context/AuthContext";
 import {
@@ -19,6 +20,7 @@ import {
   removeMember,
 } from "@/services/teams.service";
 import { Button } from "@/components/ui/Button";
+import { Badge } from "@/components/ui/Badge";
 import { formatDate } from "@/lib/format";
 import type { TeamMember } from "@/lib/types";
 
@@ -94,22 +96,23 @@ export default function TeamDetailPage({ params }: Props) {
 
   return (
     <ProtectedRoute allowedRoles={["PLAYER"]}>
-      <div className="min-h-screen bg-nuit-pelouse pb-20">
-        <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
+      <div className="min-h-screen bg-nuit-pelouse pb-24 text-craie">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-10 space-y-6">
           <button
             onClick={() => router.push("/equipes")}
-            className="flex items-center gap-1.5 text-craie/50 hover:text-craie font-mono text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer"
+            className="inline-flex items-center gap-2 text-craie/50 hover:text-craie font-mono text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer"
           >
-            <ArrowLeft size={14} weight="bold" /> Mes équipes
+            <ArrowLeft size={16} weight="bold" />
+            <span>Mes équipes</span>
           </button>
 
           {/* En-tête équipe */}
-          <div className="border-2 border-encre bg-encre p-6 shadow-brutal flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <span className="font-mono text-[10px] px-2 py-0.5 border border-vert-projecteur/40 text-vert-projecteur bg-vert-projecteur/10 font-bold uppercase">
+          <div className="rounded-3xl border border-craie/10 bg-encre/80 backdrop-blur-xl p-6 sm:p-8 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2.5">
+                <Badge variant={isCaptain ? "confirmed" : "default"}>
                   {isCaptain ? "Vous êtes Capitaine" : "Membre de l'équipe"}
-                </span>
+                </Badge>
                 <span className="font-mono text-xs text-craie/40">
                   Créée le {formatDate(team.createdAt)}
                 </span>
@@ -118,12 +121,12 @@ export default function TeamDetailPage({ params }: Props) {
                 {team.name}
               </h1>
               {team.description && (
-                <p className="font-body text-sm text-craie/60 mt-1">{team.description}</p>
+                <p className="font-sans text-sm text-craie/65">{team.description}</p>
               )}
             </div>
 
-            <div className="font-mono text-xs text-craie/60 border-2 border-encre/60 p-3 bg-nuit-pelouse shrink-0 text-center">
-              <span className="font-display font-black text-2xl text-vert-projecteur block">
+            <div className="rounded-2xl border border-craie/10 p-4 bg-nuit-pelouse/80 shrink-0 text-center font-mono text-xs text-craie/60">
+              <span className="font-display font-black text-3xl text-vert-projecteur block">
                 {team.members?.length ?? 1} / 15
               </span>
               Effectif actuel
@@ -132,47 +135,47 @@ export default function TeamDetailPage({ params }: Props) {
 
           {feedback && (
             <div
-              className={`p-3 border-2 font-mono text-xs flex items-center gap-2 ${
+              className={`p-4 rounded-2xl border font-mono text-xs flex items-center gap-2.5 backdrop-blur-md ${
                 feedback.error
-                  ? "border-orange-sifflet bg-orange-sifflet/10 text-orange-sifflet"
-                  : "border-vert-projecteur bg-vert-projecteur/10 text-vert-projecteur"
+                  ? "border-orange-sifflet/40 bg-orange-sifflet/10 text-orange-sifflet"
+                  : "border-vert-projecteur/40 bg-vert-projecteur/10 text-vert-projecteur"
               }`}
             >
-              {feedback.error ? <WarningCircle size={16} /> : <CheckCircle size={16} />}
-              <span>{feedback.text}</span>
+              {feedback.error ? <WarningCircle size={18} /> : <CheckCircle size={18} />}
+              <span className="font-sans text-sm">{feedback.text}</span>
             </div>
           )}
 
           {/* Section Capitaine : Inviter un joueur */}
           {isCaptain && (
-            <div className="border-2 border-encre bg-encre p-5 shadow-brutal space-y-3">
-              <div className="flex items-center gap-2 border-b border-encre/60 pb-2">
-                <UserPlus size={18} weight="bold" className="text-vert-projecteur" />
-                <h2 className="font-mono text-xs font-bold uppercase tracking-wider text-craie">
-                  Inviter un joueur par email (Max 15 joueurs)
+            <div className="rounded-3xl border border-craie/10 bg-encre/70 backdrop-blur-xl p-6 space-y-4 shadow-xl">
+              <div className="flex items-center gap-2.5 border-b border-craie/10 pb-3">
+                <UserPlus size={20} weight="bold" className="text-vert-projecteur" />
+                <h2 className="font-display font-black text-xl uppercase tracking-wider text-craie">
+                  Inviter un coéquipier par email
                 </h2>
               </div>
-              <form onSubmit={handleInvite} className="flex gap-2">
+              <form onSubmit={handleInvite} className="flex flex-col sm:flex-row gap-3">
                 <input
                   type="email"
                   value={inviteEmail}
                   onChange={(e) => setInviteEmail(e.target.value)}
-                  placeholder="coequipier@example.com"
+                  placeholder="coequipier@exemple.com"
                   required
-                  className="flex-1 border-2 border-encre/60 bg-nuit-pelouse text-craie px-3 py-2 text-sm outline-none focus:border-vert-projecteur"
+                  className="flex-1 rounded-xl border border-craie/15 bg-nuit-pelouse text-craie px-4 py-2.5 text-sm outline-none focus:border-vert-projecteur"
                 />
-                <Button type="submit" variant="primary" loading={inviteMut.isPending} className="shrink-0">
-                  Inviter
+                <Button type="submit" variant="booking" loading={inviteMut.isPending} className="shrink-0">
+                  Envoyer l'invitation
                 </Button>
               </form>
             </div>
           )}
 
           {/* Liste des membres */}
-          <div className="border-2 border-encre bg-encre shadow-brutal divide-y-2 divide-encre">
-            <div className="p-4 bg-encre/70 flex items-center justify-between">
-              <h2 className="font-mono text-xs font-bold uppercase tracking-wider text-craie/70">
-                Membres de l'équipe ({team.members?.length ?? 0})
+          <div className="rounded-3xl border border-craie/10 bg-encre/80 backdrop-blur-xl overflow-hidden shadow-xl divide-y divide-craie/5">
+            <div className="p-5 bg-encre/90 border-b border-craie/10 flex items-center justify-between">
+              <h2 className="font-display font-black text-lg uppercase tracking-wider text-craie">
+                Effectif du Club ({team.members?.length ?? 0})
               </h2>
             </div>
 
@@ -180,9 +183,9 @@ export default function TeamDetailPage({ params }: Props) {
               const isMemberCaptain = m.role === "CAPTAIN";
 
               return (
-                <div key={m.userId} className="p-4 flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 border-2 border-encre bg-nuit-pelouse flex items-center justify-center font-display font-black text-sm text-craie">
+                <div key={m.userId} className="p-4 sm:p-5 flex items-center justify-between gap-4 hover:bg-craie/5 transition-colors">
+                  <div className="flex items-center gap-3.5">
+                    <div className="w-10 h-10 rounded-full border border-craie/15 bg-nuit-pelouse flex items-center justify-center font-display font-black text-sm text-vert-projecteur">
                       {m.firstName?.[0]?.toUpperCase()}
                     </div>
                     <div>
@@ -191,20 +194,20 @@ export default function TeamDetailPage({ params }: Props) {
                           {m.firstName} {m.lastName}
                         </span>
                         {isMemberCaptain ? (
-                          <span className="inline-flex items-center gap-1 font-mono text-[10px] text-jaune-carton bg-jaune-carton/10 border border-jaune-carton/30 px-1.5 py-0.2 font-bold uppercase">
+                          <span className="inline-flex items-center gap-1 font-mono text-[10px] text-jaune-carton bg-jaune-carton/10 border border-jaune-carton/30 px-2 py-0.5 rounded-full font-bold uppercase">
                             <Crown size={12} weight="fill" /> Capitaine
                           </span>
                         ) : (
                           <span className="font-mono text-[10px] text-craie/40 uppercase">Membre</span>
                         )}
                       </div>
-                      <div className="font-mono text-xs text-craie/40">
-                        {m.email} {m.phone ? `· ${m.phone}` : ""} · Adhésion le {formatDate(m.joinedAt)}
+                      <div className="font-mono text-xs text-craie/40 mt-0.5">
+                        {m.email} {m.phone ? `· ${m.phone}` : ""} · Inscription le {formatDate(m.joinedAt)}
                       </div>
                     </div>
                   </div>
 
-                  {/* Bouton exclure (réservé au capitaine, impossible sur lui-même) */}
+                  {/* Bouton exclure (réservé au capitaine) */}
                   {isCaptain && !isMemberCaptain && (
                     <Button
                       size="sm"

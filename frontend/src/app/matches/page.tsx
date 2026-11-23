@@ -14,11 +14,13 @@ import {
   XCircle,
   Ticket,
   MagnifyingGlass,
+  ArrowRight,
 } from "@phosphor-icons/react";
 import { useAuth, ProtectedRoute } from "@/context/AuthContext";
 import { getMyMatches, createMatch, cancelMatch } from "@/services/matches.service";
 import { getMyTeams, searchTeams } from "@/services/teams.service";
 import { Button } from "@/components/ui/Button";
+import { Badge } from "@/components/ui/Badge";
 import { formatDateTime, toCasablancaIso } from "@/lib/format";
 import type { Match, Team, TeamSummary } from "@/lib/types";
 
@@ -82,7 +84,7 @@ export default function MatchesPage() {
     mutationFn: cancelMatch,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["my-matches"] });
-      setFeedback({ text: "Match et réservation associée annulés." });
+      setFeedback({ text: "Match et réservation annulés avec succès." });
     },
     onError: (err: unknown) => {
       const msg = err instanceof Error ? err.message : "Erreur annulation match";
@@ -109,19 +111,21 @@ export default function MatchesPage() {
 
   return (
     <ProtectedRoute allowedRoles={["PLAYER"]}>
-      <div className="min-h-screen bg-nuit-pelouse pb-20">
-        <div className="max-w-6xl mx-auto px-4 py-8 space-y-8">
+      <div className="min-h-screen bg-nuit-pelouse pb-24 text-craie">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10 space-y-8">
+          {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-            <div>
-              <div className="font-mono text-xs uppercase tracking-widest text-vert-projecteur mb-1">
+            <div className="space-y-2">
+              <div className="inline-flex items-center gap-2 font-mono text-xs uppercase tracking-widest text-vert-projecteur bg-vert-projecteur/10 px-3 py-1 rounded-full border border-vert-projecteur/20">
                 Confrontations & Calendrier
               </div>
-              <h1 className="font-display font-black text-4xl sm:text-5xl uppercase tracking-tight text-craie">
+              <h1 className="font-display font-black text-3xl sm:text-5xl uppercase tracking-tight text-craie">
                 Mes <span className="text-vert-projecteur">Matchs</span>
               </h1>
             </div>
             <Button
-              variant="primary"
+              variant="booking"
+              size="md"
               onClick={() => {
                 if (captainTeams.length === 0) {
                   setFeedback({
@@ -133,7 +137,7 @@ export default function MatchesPage() {
                 setHomeTeamId(captainTeams[0].id);
                 setShowModal(true);
               }}
-              className="shadow-brutal shrink-0"
+              className="shadow-lg shadow-vert-projecteur/20 shrink-0"
             >
               <Plus size={16} weight="bold" />
               Organiser un match
@@ -142,30 +146,30 @@ export default function MatchesPage() {
 
           {feedback && (
             <div
-              className={`p-3 border-2 font-mono text-xs flex items-center gap-2 ${
+              className={`p-4 rounded-2xl border font-mono text-xs flex items-center gap-3 backdrop-blur-md ${
                 feedback.error
-                  ? "border-orange-sifflet bg-orange-sifflet/10 text-orange-sifflet"
-                  : "border-vert-projecteur bg-vert-projecteur/10 text-vert-projecteur"
+                  ? "border-orange-sifflet/40 bg-orange-sifflet/10 text-orange-sifflet"
+                  : "border-vert-projecteur/40 bg-vert-projecteur/10 text-vert-projecteur"
               }`}
             >
-              {feedback.error ? <WarningCircle size={16} /> : <CheckCircle size={16} />}
-              <span>{feedback.text}</span>
+              {feedback.error ? <WarningCircle size={20} weight="bold" /> : <CheckCircle size={20} weight="bold" />}
+              <span className="font-sans text-sm">{feedback.text}</span>
             </div>
           )}
 
           {/* Liste des matchs */}
           {loadingMatches ? (
-            <div className="text-center py-12 font-mono text-sm text-craie/40 animate-pulse">
+            <div className="text-center py-16 font-mono text-sm text-craie/40 animate-pulse">
               Chargement de vos matchs…
             </div>
           ) : matches.length === 0 ? (
-            <div className="border-2 border-dashed border-craie/20 p-12 text-center bg-encre/40 space-y-3">
+            <div className="rounded-3xl border border-dashed border-craie/20 p-16 text-center bg-encre/40 space-y-4">
               <Trophy size={48} className="mx-auto text-craie/30" />
               <p className="font-mono text-sm text-craie/70 font-semibold">
                 Aucun match planifié pour vos équipes.
               </p>
-              <p className="font-mono text-xs text-craie/40">
-                En tant que capitaine, organisez un match face à une autre équipe !
+              <p className="font-sans text-xs text-craie/40">
+                En tant que capitaine, organisez un match face à un club adverse !
               </p>
               {captainTeams.length > 0 && (
                 <Button variant="secondary" onClick={() => setShowModal(true)}>
@@ -182,55 +186,52 @@ export default function MatchesPage() {
                 return (
                   <div
                     key={m.id}
-                    className="border-2 border-encre bg-encre shadow-brutal p-5 flex flex-col justify-between space-y-4 hover:border-vert-projecteur transition-colors"
+                    className="rounded-3xl border border-craie/10 bg-encre/80 backdrop-blur-xl p-6 flex flex-col justify-between space-y-5 hover:border-vert-projecteur/40 transition-all shadow-xl shadow-black/20"
                   >
                     <div>
-                      <div className="flex items-center justify-between gap-2 mb-3">
-                        <span
-                          className={`font-mono text-[10px] px-2 py-0.5 border font-bold uppercase ${
+                      <div className="flex items-center justify-between gap-2 mb-4">
+                        <Badge
+                          variant={
                             m.status === "PLANNED"
-                              ? "border-vert-projecteur text-vert-projecteur bg-vert-projecteur/10"
+                              ? "confirmed"
                               : m.status === "FINISHED"
-                              ? "border-craie/40 text-craie/40 bg-craie/5"
-                              : "border-orange-sifflet text-orange-sifflet bg-orange-sifflet/10"
-                          }`}
+                              ? "default"
+                              : "cancelled"
+                          }
                         >
-                          {m.status === "PLANNED"
-                            ? "Prévu"
-                            : m.status === "FINISHED"
-                            ? "Terminé"
-                            : "Annulé"}
-                        </span>
-                        <span className="font-mono text-xs text-craie/50 flex items-center gap-1">
-                          <Clock size={12} /> {m.durationMinutes} min
+                          {m.status === "PLANNED" ? "Prévu" : m.status === "FINISHED" ? "Terminé" : "Annulé"}
+                        </Badge>
+                        <span className="font-mono text-xs text-craie/50 flex items-center gap-1.5 bg-craie/5 px-2.5 py-0.5 rounded-full">
+                          <Clock size={14} /> {m.durationMinutes} min
                         </span>
                       </div>
 
-                      {/* Affiche Home vs Away */}
-                      <div className="bg-nuit-pelouse border-2 border-encre p-4 text-center space-y-2">
-                        <div className="font-display font-black text-xl uppercase text-craie">
+                      {/* Stadium Arena Card */}
+                      <div className="rounded-2xl bg-nuit-pelouse/80 border border-craie/10 p-5 text-center space-y-3 relative overflow-hidden">
+                        <div className="font-display font-black text-2xl uppercase text-craie">
                           {m.homeTeamName}
                         </div>
-                        <div className="font-mono text-xs font-bold uppercase text-orange-sifflet tracking-widest">
+                        <div className="inline-block px-3 py-0.5 rounded-full bg-orange-sifflet/15 border border-orange-sifflet/30 font-mono text-xs font-bold text-orange-sifflet">
                           VS
                         </div>
-                        <div className="font-display font-black text-xl uppercase text-craie">
+                        <div className="font-display font-black text-2xl uppercase text-craie">
                           {m.awayTeamName}
                         </div>
                       </div>
 
-                      <div className="mt-3 flex items-center gap-2 font-mono text-xs text-craie/70">
-                        <Calendar size={14} className="text-vert-projecteur" />
+                      <div className="mt-4 flex items-center gap-2 font-mono text-xs text-craie/70">
+                        <Calendar size={16} className="text-vert-projecteur" />
                         <span>{formatDateTime(m.startAt)}</span>
                       </div>
                     </div>
 
-                    <div className="border-t border-encre/60 pt-3 flex flex-wrap items-center justify-between gap-2">
+                    <div className="border-t border-craie/10 pt-4 flex flex-wrap items-center justify-between gap-3">
                       <Link
                         href={`/matches/${m.id}`}
-                        className="font-mono text-xs font-bold uppercase text-craie/60 hover:text-craie"
+                        className="inline-flex items-center gap-1 font-mono text-xs font-bold uppercase text-craie/60 hover:text-craie"
                       >
-                        Détails match →
+                        <span>Détails match</span>
+                        <ArrowRight size={14} />
                       </Link>
 
                       <div className="flex items-center gap-2">
@@ -238,10 +239,10 @@ export default function MatchesPage() {
                           <>
                             <Link
                               href={`/reserver?matchId=${m.id}`}
-                              className="inline-flex items-center gap-1 px-3 py-1.5 border-2 border-vert-projecteur bg-vert-projecteur text-encre font-mono text-xs font-black uppercase tracking-wider shadow-brutal hover:bg-vert-projecteur/90 transition-colors"
+                              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-vert-projecteur text-encre font-mono text-xs font-black uppercase tracking-wider shadow-md shadow-vert-projecteur/20 hover:bg-vert-projecteur/90 transition-all"
                             >
                               <Ticket size={14} weight="bold" />
-                              Réserver terrain
+                              <span>Réserver terrain</span>
                             </Link>
                             <Button
                               size="sm"
@@ -265,22 +266,22 @@ export default function MatchesPage() {
 
         {/* Modal Créer Match */}
         {showModal && (
-          <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
-            <div className="border-2 border-encre bg-encre p-6 shadow-brutal max-w-lg w-full space-y-4">
-              <div className="flex items-center justify-between border-b border-encre/60 pb-3">
+          <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+            <div className="rounded-3xl border border-craie/15 bg-encre/95 backdrop-blur-2xl p-6 sm:p-8 shadow-2xl max-w-lg w-full space-y-5">
+              <div className="flex items-center justify-between border-b border-craie/10 pb-3">
                 <h2 className="font-display font-black text-2xl uppercase text-craie">
                   Organiser un <span className="text-vert-projecteur">Match</span>
                 </h2>
                 <button
                   onClick={() => setShowModal(false)}
-                  className="text-craie/60 hover:text-craie font-mono text-lg cursor-pointer"
+                  className="w-8 h-8 rounded-full bg-craie/10 text-craie/60 hover:text-craie flex items-center justify-center font-mono cursor-pointer"
                 >
                   ✕
                 </button>
               </div>
 
               <form onSubmit={handleCreateSubmit} className="space-y-4">
-                <div className="space-y-1">
+                <div className="space-y-1.5">
                   <label className="font-mono text-xs uppercase text-craie/60 block">
                     Mon équipe (Domicile - Vous êtes capitaine)
                   </label>
@@ -288,7 +289,7 @@ export default function MatchesPage() {
                     value={homeTeamId}
                     onChange={(e) => setHomeTeamId(e.target.value)}
                     required
-                    className="w-full border-2 border-encre/60 bg-nuit-pelouse text-craie px-3 py-2 text-sm outline-none focus:border-vert-projecteur"
+                    className="w-full rounded-xl border border-craie/15 bg-nuit-pelouse text-craie px-3.5 py-2.5 text-sm outline-none focus:border-vert-projecteur"
                   >
                     {captainTeams.map((t: Team) => (
                       <option key={t.id} value={t.id}>
@@ -298,12 +299,12 @@ export default function MatchesPage() {
                   </select>
                 </div>
 
-                <div className="space-y-1">
+                <div className="space-y-1.5">
                   <label className="font-mono text-xs uppercase text-craie/60 block">
                     Équipe adverse
                   </label>
                   {selectedAwayTeam ? (
-                    <div className="flex items-center justify-between border-2 border-vert-projecteur bg-vert-projecteur/10 px-3 py-2 text-sm text-craie">
+                    <div className="flex items-center justify-between rounded-xl border border-vert-projecteur/40 bg-vert-projecteur/10 px-3.5 py-2.5 text-sm text-craie">
                       <span className="font-mono font-bold">{selectedAwayTeam.name}</span>
                       <button
                         type="button"
@@ -315,7 +316,7 @@ export default function MatchesPage() {
                     </div>
                   ) : (
                     <div className="space-y-2">
-                      <div className="flex items-center border-2 border-encre/60 bg-nuit-pelouse px-3 py-1.5 focus-within:border-vert-projecteur">
+                      <div className="flex items-center rounded-xl border border-craie/15 bg-nuit-pelouse px-3.5 py-2 focus-within:border-vert-projecteur">
                         <MagnifyingGlass size={16} className="text-craie/40 mr-2" />
                         <input
                           type="text"
@@ -326,7 +327,7 @@ export default function MatchesPage() {
                         />
                       </div>
                       {searchedAwayTeams.length > 0 && (
-                        <div className="border-2 border-encre/60 bg-nuit-pelouse max-h-36 overflow-y-auto divide-y divide-encre/40">
+                        <div className="rounded-xl border border-craie/15 bg-nuit-pelouse max-h-36 overflow-y-auto divide-y divide-craie/10">
                           {searchedAwayTeams
                             .filter((t: TeamSummary) => t.id !== homeTeamId)
                             .map((t: TeamSummary) => (
@@ -337,7 +338,7 @@ export default function MatchesPage() {
                                   setSelectedAwayTeam(t);
                                   setAwayTeamSearch("");
                                 }}
-                                className="w-full text-left px-3 py-2 text-xs font-mono text-craie hover:bg-vert-projecteur hover:text-encre cursor-pointer"
+                                className="w-full text-left px-3.5 py-2 text-xs font-mono text-craie hover:bg-vert-projecteur hover:text-encre cursor-pointer"
                               >
                                 {t.name}
                               </button>
@@ -348,23 +349,23 @@ export default function MatchesPage() {
                   )}
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-1">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  <div className="space-y-1.5">
                     <label className="font-mono text-xs uppercase text-craie/60 block">Date et heure</label>
                     <input
                       type="datetime-local"
                       value={datetimeLocal}
                       onChange={(e) => setDatetimeLocal(e.target.value)}
                       required
-                      className="w-full border-2 border-encre/60 bg-nuit-pelouse text-craie px-3 py-2 text-sm outline-none focus:border-vert-projecteur"
+                      className="w-full rounded-xl border border-craie/15 bg-nuit-pelouse text-craie px-3.5 py-2 text-sm outline-none focus:border-vert-projecteur"
                     />
                   </div>
-                  <div className="space-y-1">
-                    <label className="font-mono text-xs uppercase text-craie/60 block">Durée (minutes)</label>
+                  <div className="space-y-1.5">
+                    <label className="font-mono text-xs uppercase text-craie/60 block">Durée</label>
                     <select
                       value={durationMinutes}
                       onChange={(e) => setDurationMinutes(Number(e.target.value))}
-                      className="w-full border-2 border-encre/60 bg-nuit-pelouse text-craie px-3 py-2 text-sm outline-none focus:border-vert-projecteur"
+                      className="w-full rounded-xl border border-craie/15 bg-nuit-pelouse text-craie px-3.5 py-2 text-sm outline-none focus:border-vert-projecteur"
                     >
                       <option value={60}>60 minutes (1h)</option>
                       <option value={90}>90 minutes (1h30)</option>
@@ -374,13 +375,13 @@ export default function MatchesPage() {
                   </div>
                 </div>
 
-                <div className="flex justify-end gap-2 pt-2">
+                <div className="flex justify-end gap-2 pt-3 border-t border-craie/10">
                   <Button variant="ghost" onClick={() => setShowModal(false)}>
                     Annuler
                   </Button>
                   <Button
                     type="submit"
-                    variant="primary"
+                    variant="booking"
                     disabled={!selectedAwayTeam}
                     loading={createMut.isPending}
                   >

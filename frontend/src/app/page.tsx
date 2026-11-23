@@ -9,43 +9,46 @@ import {
   UsersThree,
   CalendarCheck,
   ShieldCheck,
-  SignIn,
-  UserPlus,
+  Lightning,
+  MapPin,
+  Clock,
 } from "@phosphor-icons/react";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/Button";
-import { Marquee } from "@/components/ui/Marquee";
 import { Footer } from "@/components/ui/Footer";
-
-const MARQUEE_ITEMS = [
-  "Plateforme officielle FootBook",
-  "Casablanca · Rabat · Marrakech · Tanger",
-  "Terrains 5v5 · 7v7 · 11v11",
-  "Gestion d'équipes et défis de matchs",
-  "Réservation simple et sécurisée",
-];
 
 const FEATURES = [
   {
     icon: SoccerBall,
     title: "Recherche de terrains",
-    desc: "Découvrez les terrains synthétiques et naturels disponibles dans votre ville avec horaires et équipements.",
+    desc: "Découvrez les terrains synthétiques et naturels disponibles dans votre ville avec horaires, tarifs et équipements.",
+    color: "green",
   },
   {
     icon: UsersThree,
     title: "Équipes et Défis",
-    desc: "Créez votre équipe, invitez vos amis et organisez des matchs compétitifs en quelques clics.",
+    desc: "Créez votre club, invitez vos coéquipiers et organisez des matchs compétitifs en quelques clics.",
+    color: "yellow",
   },
   {
     icon: CalendarCheck,
     title: "Réservation en direct",
-    desc: "Choisissez votre créneau horaire, réservez pour votre match et payez directement sur place au gérant.",
+    desc: "Choisissez votre créneau horaire, réservez pour votre match et payez en direct sur place au gérant.",
+    color: "orange",
   },
   {
     icon: ShieldCheck,
     title: "Infrastructures vérifiées",
     desc: "Tous les terrains sont contrôlés et validés par l'administration avant d'être ouverts aux réservations.",
+    color: "green",
   },
+];
+
+const METRICS = [
+  { value: "100%", label: "Terrains vérifiés" },
+  { value: "24/7", label: "Réservation en ligne" },
+  { value: "< 2 min", label: "Organisation d'un match" },
+  { value: "0 MAD", label: "Frais cachés" },
 ];
 
 export default function HomePage() {
@@ -67,100 +70,96 @@ export default function HomePage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-nuit-pelouse flex items-center justify-center p-4">
-        <p className="font-mono text-sm text-craie/60 uppercase tracking-widest animate-pulse">
-          Chargement…
-        </p>
+        <div className="flex items-center gap-3 text-vert-projecteur">
+          <SoccerBall size={24} className="animate-spin" />
+          <p className="font-mono text-sm tracking-widest uppercase">Chargement…</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-nuit-pelouse flex flex-col justify-between">
+    <div className="min-h-screen bg-nuit-pelouse flex flex-col justify-between relative overflow-hidden">
+      {/* Background Glows */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[350px] bg-vert-projecteur/5 blur-[120px] rounded-full pointer-events-none" />
+      <div className="absolute top-1/3 -left-32 w-[400px] h-[400px] bg-orange-sifflet/5 blur-[140px] rounded-full pointer-events-none" />
+
       <div>
-        {/* Top bar */}
-        <header className="border-b-2 border-encre bg-nuit-pelouse/90 backdrop-blur sticky top-0 z-40 px-4 sm:px-8 py-3.5 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 group">
-            <div className="w-8 h-8 bg-vert-projecteur border-2 border-encre flex items-center justify-center font-display font-black text-encre text-base shadow-brutal-sm group-hover:-translate-y-0.5 transition-transform">
-              FB
-            </div>
-            <span className="font-display font-black text-2xl uppercase tracking-wider text-craie">
-              Foot<span className="text-vert-projecteur">Book</span>
-            </span>
-          </Link>
-
-          <div className="flex items-center gap-3">
-            <Link href="/login">
-              <Button variant="ghost" size="sm" className="font-mono text-xs">
-                <SignIn size={15} weight="bold" />
-                Connexion
-              </Button>
-            </Link>
-            <Link href="/register">
-              <Button variant="primary" size="sm" className="font-mono text-xs shadow-brutal-sm">
-                <UserPlus size={15} weight="bold" />
-                Inscription
-              </Button>
-            </Link>
-          </div>
-        </header>
-
-        {/* Marquee ticker */}
-        <div className="border-b-2 border-encre bg-jaune-carton text-encre py-1">
-          <Marquee items={MARQUEE_ITEMS} />
-        </div>
-
         {/* Hero Section */}
-        <main className="max-w-6xl mx-auto px-4 py-16 sm:py-24 text-center">
+        <main className="max-w-6xl mx-auto px-4 pt-16 pb-24 sm:pt-24 sm:pb-32 text-center relative z-10">
           <motion.div
-            initial={{ opacity: 0, y: 15 }}
+            initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="space-y-6"
+            transition={{ duration: 0.6, ease: "easeOut" }}
+            className="space-y-8"
           >
-            <div className="inline-block bg-vert-projecteur/10 text-vert-projecteur border border-vert-projecteur/30 px-3 py-1 font-mono text-xs uppercase tracking-widest">
-              Plateforme N°1 de réservation au Maroc
+            {/* Pill Tag */}
+            <div className="inline-flex items-center gap-2.5 rounded-full border border-vert-projecteur/30 bg-vert-projecteur/10 px-4 py-1.5 font-mono text-xs uppercase tracking-wider text-vert-projecteur backdrop-blur-md shadow-sm shadow-vert-projecteur/10">
+              <SoccerBall size={16} weight="fill" className="text-vert-projecteur shrink-0" />
+              <span>Plateforme N°1 de réservation au Maroc</span>
             </div>
 
-            <h1 className="font-display font-black text-4xl sm:text-6xl lg:text-7xl uppercase text-craie leading-none tracking-tight">
+            {/* Title */}
+            <h1 className="font-display font-black text-4xl sm:text-6xl lg:text-7xl uppercase text-craie leading-[1.05] tracking-tight">
               Réservez votre terrain. <br />
-              <span className="text-vert-projecteur">Jouez sans attendre.</span>
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-vert-projecteur via-vert-projecteur/90 to-jaune-carton">
+                Jouez sans attendre.
+              </span>
             </h1>
 
-            <p className="max-w-2xl mx-auto text-craie/70 text-base sm:text-lg font-sans leading-relaxed">
-              FootBook connecte les passionnés de football aux meilleurs terrains et gérants de votre ville.
+            {/* Description */}
+            <p className="max-w-2xl mx-auto text-craie/75 text-base sm:text-lg font-sans leading-relaxed">
+              FootBook connecte les passionnés de football aux meilleurs complexes et terrains de votre ville.
               Organisez vos matchs, composez vos équipes et validez vos créneaux en toute simplicité.
             </p>
 
+            {/* Action Buttons */}
             <div className="flex flex-wrap items-center justify-center gap-4 pt-4">
               <Link href="/register">
-                <Button variant="booking" size="lg" className="shadow-brutal text-sm sm:text-base px-8 py-4">
+                <Button variant="booking" size="lg" className="shadow-lg shadow-vert-projecteur/25 text-sm sm:text-base px-8 py-4">
                   Créer un compte Joueur
                 </Button>
               </Link>
               <Link href="/login">
-                <Button variant="ghost" size="lg" className="border-2 border-craie/20 text-craie text-sm sm:text-base px-8 py-4">
+                <Button variant="ghost" size="lg" className="border border-craie/20 text-craie text-sm sm:text-base px-8 py-4 hover:border-craie/60">
                   Se connecter
                 </Button>
               </Link>
             </div>
+
+            {/* Stats Highlights Bar */}
+            <div className="pt-12 max-w-4xl mx-auto">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 rounded-2xl bg-encre/60 backdrop-blur-xl border border-craie/10">
+                {METRICS.map((m, i) => (
+                  <div key={i} className="text-center p-2">
+                    <div className="font-display font-black text-2xl sm:text-3xl text-vert-projecteur">
+                      {m.value}
+                    </div>
+                    <div className="font-mono text-xs text-craie/60 uppercase tracking-wider mt-0.5">
+                      {m.label}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </motion.div>
 
           {/* Features Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mt-20 text-left">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mt-24 text-left">
             {FEATURES.map((item, idx) => {
               const Icon = item.icon;
               return (
                 <div
                   key={idx}
-                  className="bg-encre/40 border-2 border-encre/80 p-5 space-y-3 shadow-brutal-sm hover:border-vert-projecteur/50 transition-colors"
+                  className="group rounded-2xl bg-encre/70 backdrop-blur-xl border border-craie/10 p-6 space-y-4 hover:border-vert-projecteur/40 hover:-translate-y-1 transition-all duration-300 shadow-xl shadow-black/20"
                 >
-                  <div className="w-10 h-10 bg-vert-projecteur/10 text-vert-projecteur border border-vert-projecteur/30 flex items-center justify-center">
-                    <Icon size={22} weight="bold" />
+                  <div className="w-12 h-12 rounded-xl bg-vert-projecteur/10 text-vert-projecteur border border-vert-projecteur/20 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
+                    <Icon size={24} weight="bold" />
                   </div>
-                  <h3 className="font-display font-black text-lg uppercase text-craie tracking-wide">
+                  <h3 className="font-display font-black text-xl uppercase text-craie tracking-wide">
                     {item.title}
                   </h3>
-                  <p className="text-craie/60 text-xs font-sans leading-relaxed">
+                  <p className="text-craie/65 text-xs font-sans leading-relaxed">
                     {item.desc}
                   </p>
                 </div>
@@ -170,7 +169,7 @@ export default function HomePage() {
         </main>
       </div>
 
-      {/* Footer Section D */}
+      {/* Footer */}
       <Footer />
     </div>
   );
