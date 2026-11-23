@@ -31,11 +31,7 @@ public class PhotoStorageService {
         String dir = uploadDirConfig
                 .or(() -> Optional.ofNullable(System.getenv("UPLOAD_DIR")))
                 .or(() -> Optional.ofNullable(System.getProperty("app.upload.dir")))
-                .orElse(null);
-
-        if (dir == null || dir.isBlank()) {
-            throw new IllegalStateException("app.upload.dir (or UPLOAD_DIR env) is missing. Application cannot start.");
-        }
+                .orElseGet(() -> Paths.get(System.getProperty("user.home"), ".football-booking", "uploads").toString());
 
         try {
             uploadDir = Paths.get(dir.trim()).toAbsolutePath().normalize();
