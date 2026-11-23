@@ -152,21 +152,39 @@ public class FieldService {
         List<Booking> activeBookings = bookingRepository.findActiveBetween(fieldId, dayStart, dayEnd);
 
         List<SlotResponse> slots = new ArrayList<>();
-        LocalTime current = field.getOpenTime();
-        LocalTime close = field.getCloseTime();
+        LocalTime open = field.getOpenTime() != null ? field.getOpenTime() : LocalTime.of(8, 0);
+        LocalTime close = field.getCloseTime() != null ? field.getCloseTime() : LocalTime.of(23, 0);
 
-        while (current.plusHours(1).compareTo(close) <= 0 && !current.plusHours(1).equals(current)) {
-            LocalTime next = current.plusHours(1);
-            OffsetDateTime slotStart = targetDate.atTime(current).atZone(ZONE).toOffsetDateTime();
-            OffsetDateTime slotEnd = targetDate.atTime(next).atZone(ZONE).toOffsetDateTime();
+        int startHour = open.getHour();
+        int endHour = close.getHour();
+        if (close.equals(LocalTime.MIDNIGHT) || close.equals(LocalTime.MIN)) {
+            endHour = 24;
+        }
+
+        int totalHours;
+        if (endHour > startHour) {
+            totalHours = endHour - startHour;
+        } else if (endHour < startHour) {
+            totalHours = (24 - startHour) + endHour;
+        } else {
+            totalHours = 12;
+        }
+        totalHours = Math.min(24, Math.max(1, totalHours));
+
+        for (int i = 0; i < totalHours; i++) {
+            int currentHour = (startHour + i) % 24;
+            int nextHour = (startHour + i + 1) % 24;
+            int dayOffsetStart = (startHour + i) / 24;
+            int dayOffsetEnd = (startHour + i + 1) / 24;
+
+            OffsetDateTime slotStart = targetDate.plusDays(dayOffsetStart).atTime(currentHour, 0).atZone(ZONE).toOffsetDateTime();
+            OffsetDateTime slotEnd = targetDate.plusDays(dayOffsetEnd).atTime(nextHour, 0).atZone(ZONE).toOffsetDateTime();
 
             boolean occupied = activeBookings.stream().anyMatch(b ->
                     b.getStartAt().isBefore(slotEnd) && b.getEndAt().isAfter(slotStart));
 
-            String timeLabel = String.format("%02d:00", current.getHour());
+            String timeLabel = String.format("%02d:00", currentHour);
             slots.add(new SlotResponse(timeLabel, occupied ? "reserved" : "available", !occupied));
-
-            current = next;
         }
 
         return slots;

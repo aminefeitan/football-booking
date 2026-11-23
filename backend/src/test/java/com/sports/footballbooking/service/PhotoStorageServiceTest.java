@@ -31,6 +31,17 @@ class PhotoStorageServiceTest {
     }
 
     @Test
+    @DisplayName("Fallback automatique sur le répertoire par défaut sans variable d'environnement")
+    void testInitFallbackDefaultDirectory() throws Exception {
+        PhotoStorageService fallbackService = new PhotoStorageService();
+        Field configField = PhotoStorageService.class.getDeclaredField("uploadDirConfig");
+        configField.setAccessible(true);
+        configField.set(fallbackService, Optional.empty());
+
+        assertDoesNotThrow(fallbackService::init);
+    }
+
+    @Test
     @DisplayName("Section E : Enregistrement réussi d'une image JPEG valide (magic bytes FF D8 FF)")
     void testSaveValidJpeg() {
         byte[] jpegBytes = new byte[]{
