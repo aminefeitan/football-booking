@@ -26,18 +26,26 @@ export interface UpdatePasswordRequest {
 }
 
 export async function login(data: LoginRequest): Promise<AuthResponse> {
+  clearToken();
   const res = await api<AuthResponse>("/auth/login", {
     method: "POST",
-    body: data,
+    body: {
+      ...data,
+      email: data.email.trim().toLowerCase(),
+    },
   });
   persistToken(res.token);
   return res;
 }
 
 export async function register(data: RegisterRequest): Promise<AuthResponse> {
+  clearToken();
   const res = await api<AuthResponse>("/auth/register", {
     method: "POST",
-    body: data,
+    body: {
+      ...data,
+      email: data.email.trim().toLowerCase(),
+    },
   });
   persistToken(res.token);
   return res;
@@ -63,4 +71,8 @@ export async function updatePassword(data: UpdatePasswordRequest): Promise<void>
 
 export function logout() {
   clearToken();
+  if (typeof window !== "undefined") {
+    sessionStorage.clear();
+    localStorage.removeItem("fb_token");
+  }
 }

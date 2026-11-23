@@ -16,6 +16,7 @@ import {
 import { useAuth, ProtectedRoute } from "@/context/AuthContext";
 import { getMatchById, cancelMatch } from "@/services/matches.service";
 import { Button } from "@/components/ui/Button";
+import { Badge } from "@/components/ui/Badge";
 import { formatDateTime, formatDate } from "@/lib/format";
 
 interface Props {
@@ -65,39 +66,40 @@ export default function MatchDetailPage({ params }: Props) {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-nuit-pelouse pb-20">
-        <div className="max-w-3xl mx-auto px-4 py-8 space-y-6">
+      <div className="min-h-screen bg-nuit-pelouse pb-24 text-craie">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10 space-y-6">
           <button
             onClick={() => router.push("/matches")}
-            className="flex items-center gap-1.5 text-craie/50 hover:text-craie font-mono text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer"
+            className="inline-flex items-center gap-2 text-craie/50 hover:text-craie font-mono text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer"
           >
-            <ArrowLeft size={14} weight="bold" /> Mes matchs
+            <ArrowLeft size={16} weight="bold" />
+            <span>Mes matchs</span>
           </button>
 
-          <div className="border-2 border-encre bg-encre p-6 shadow-brutal space-y-6">
-            <div className="flex items-center justify-between border-b border-encre/60 pb-3">
-              <span
-                className={`font-mono text-xs px-2.5 py-1 border font-bold uppercase ${
+          <div className="rounded-3xl border border-craie/10 bg-encre/80 backdrop-blur-xl p-6 sm:p-8 shadow-2xl space-y-6">
+            <div className="flex items-center justify-between border-b border-craie/10 pb-4">
+              <Badge
+                variant={
                   match.status === "PLANNED"
-                    ? "border-vert-projecteur text-vert-projecteur bg-vert-projecteur/10"
+                    ? "confirmed"
                     : match.status === "FINISHED"
-                    ? "border-craie/40 text-craie/40 bg-craie/5"
-                    : "border-orange-sifflet text-orange-sifflet bg-orange-sifflet/10"
-                }`}
+                    ? "default"
+                    : "cancelled"
+                }
               >
                 {match.status === "PLANNED" ? "Prévu" : match.status === "FINISHED" ? "Terminé" : "Annulé"}
-              </span>
+              </Badge>
               <span className="font-mono text-xs text-craie/40">
                 Organisé le {formatDate(match.createdAt)}
               </span>
             </div>
 
-            {/* Confrontation */}
-            <div className="bg-nuit-pelouse border-2 border-encre p-6 text-center space-y-3">
+            {/* Stadium Arena Card */}
+            <div className="rounded-2xl bg-nuit-pelouse/90 border border-craie/10 p-6 text-center space-y-3">
               <div className="font-display font-black text-3xl uppercase text-craie">
                 {match.homeTeamName}
               </div>
-              <div className="font-mono text-sm font-bold uppercase text-orange-sifflet tracking-widest">
+              <div className="inline-block px-3 py-0.5 rounded-full bg-orange-sifflet/15 border border-orange-sifflet/30 font-mono text-xs font-bold text-orange-sifflet">
                 VS
               </div>
               <div className="font-display font-black text-3xl uppercase text-craie">
@@ -105,7 +107,7 @@ export default function MatchDetailPage({ params }: Props) {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-encre/60 pt-4 font-mono text-xs">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-craie/10 pt-4 font-mono text-xs">
               <div className="space-y-1">
                 <span className="text-craie/40 uppercase block">Horaire de début</span>
                 <span className="text-craie font-bold flex items-center gap-1.5">
@@ -127,14 +129,14 @@ export default function MatchDetailPage({ params }: Props) {
             </div>
 
             {isPlanned && (isCreator || isAdmin) && (
-              <div className="border-t border-encre/60 pt-4 flex flex-wrap items-center justify-between gap-3">
+              <div className="border-t border-craie/10 pt-4 flex flex-wrap items-center justify-between gap-3">
                 {isCreator && (
                   <Link
                     href={`/reserver?matchId=${match.id}`}
-                    className="inline-flex items-center gap-2 px-4 py-2 border-2 border-vert-projecteur bg-vert-projecteur text-encre font-mono text-xs font-black uppercase tracking-wider shadow-brutal hover:bg-vert-projecteur/90 transition-colors"
+                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-vert-projecteur text-encre font-mono text-xs font-black uppercase tracking-wider shadow-lg shadow-vert-projecteur/20 hover:bg-vert-projecteur/90 transition-all"
                   >
                     <Ticket size={16} weight="bold" />
-                    Réserver un terrain
+                    <span>Réserver un terrain</span>
                   </Link>
                 )}
                 <Button

@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { User, Lock, CheckCircle, WarningCircle } from "@phosphor-icons/react";
+import { User, Lock, CheckCircle, WarningCircle, ShieldCheck } from "@phosphor-icons/react";
 import { useAuth, ProtectedRoute } from "@/context/AuthContext";
 import { updateProfile, updatePassword } from "@/services/auth.service";
 import { Button } from "@/components/ui/Button";
+import { Badge } from "@/components/ui/Badge";
 
 export default function ProfilPage() {
   const { user, refreshUser } = useAuth();
@@ -74,123 +75,126 @@ export default function ProfilPage() {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-nuit-pelouse py-10 px-4">
-        <div className="max-w-3xl mx-auto space-y-8">
+      <div className="min-h-screen bg-nuit-pelouse py-12 px-4 sm:px-6 text-craie">
+        <div className="max-w-4xl mx-auto space-y-8">
           <div>
-            <h1 className="font-display font-black text-3xl sm:text-4xl uppercase text-craie tracking-tight">
+            <div className="inline-flex items-center gap-2 font-mono text-xs uppercase tracking-widest text-vert-projecteur bg-vert-projecteur/10 px-3 py-1 rounded-full border border-vert-projecteur/20 mb-2">
+              Compte & Paramètres
+            </div>
+            <h1 className="font-display font-black text-3xl sm:text-5xl uppercase text-craie tracking-tight">
               Mon <span className="text-vert-projecteur">Profil</span>
             </h1>
-            <p className="font-mono text-xs text-craie/60 uppercase tracking-widest mt-1">
-              Gérez vos informations personnelles et votre sécurité
+            <p className="font-sans text-sm text-craie/65 mt-1">
+              Gérez vos coordonnées personnelles et la sécurité de votre compte
             </p>
           </div>
 
           {/* Formulaire Informations Générales */}
-          <div className="border-2 border-encre bg-encre p-6 shadow-brutal space-y-4">
-            <div className="flex items-center gap-2 border-b border-encre/60 pb-3">
-              <User size={20} weight="bold" className="text-vert-projecteur" />
-              <h2 className="font-mono text-sm font-bold uppercase tracking-wider text-craie">
-                Informations du compte
-              </h2>
+          <div className="rounded-3xl border border-craie/10 bg-encre/80 backdrop-blur-xl p-6 sm:p-8 shadow-xl space-y-6">
+            <div className="flex items-center justify-between border-b border-craie/10 pb-4">
+              <div className="flex items-center gap-2.5">
+                <User size={22} weight="bold" className="text-vert-projecteur" />
+                <h2 className="font-display font-black text-xl uppercase tracking-wide text-craie">
+                  Informations du compte
+                </h2>
+              </div>
+              <Badge variant={user?.role === "ADMIN" ? "pending" : user?.role === "FIELD_MANAGER" ? "last" : "confirmed"}>
+                {user?.role}
+              </Badge>
             </div>
 
             {profileMsg && (
               <div
-                className={`p-3 border-2 font-mono text-xs flex items-center gap-2 ${
+                className={`p-4 rounded-2xl border font-mono text-xs flex items-center gap-2.5 ${
                   profileMsg.error
-                    ? "border-orange-sifflet bg-orange-sifflet/10 text-orange-sifflet"
-                    : "border-vert-projecteur bg-vert-projecteur/10 text-vert-projecteur"
+                    ? "border-orange-sifflet/40 bg-orange-sifflet/10 text-orange-sifflet"
+                    : "border-vert-projecteur/40 bg-vert-projecteur/10 text-vert-projecteur"
                 }`}
               >
-                {profileMsg.error ? <WarningCircle size={16} /> : <CheckCircle size={16} />}
-                <span>{profileMsg.text}</span>
+                {profileMsg.error ? <WarningCircle size={18} /> : <CheckCircle size={18} />}
+                <span className="font-sans text-sm">{profileMsg.text}</span>
               </div>
             )}
 
             <form onSubmit={handleProfileSubmit} className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1">
+                <div className="space-y-1.5">
                   <label className="font-mono text-xs uppercase text-craie/60 block">Prénom</label>
                   <input
                     type="text"
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
                     required
-                    className="w-full border-2 border-encre/60 bg-nuit-pelouse text-craie px-3 py-2 text-sm outline-none focus:border-vert-projecteur"
+                    className="w-full rounded-xl border border-craie/15 bg-nuit-pelouse text-craie px-3.5 py-2.5 text-sm outline-none focus:border-vert-projecteur"
                   />
                 </div>
-                <div className="space-y-1">
+                <div className="space-y-1.5">
                   <label className="font-mono text-xs uppercase text-craie/60 block">Nom</label>
                   <input
                     type="text"
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
                     required
-                    className="w-full border-2 border-encre/60 bg-nuit-pelouse text-craie px-3 py-2 text-sm outline-none focus:border-vert-projecteur"
+                    className="w-full rounded-xl border border-craie/15 bg-nuit-pelouse text-craie px-3.5 py-2.5 text-sm outline-none focus:border-vert-projecteur"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1">
+                <div className="space-y-1.5">
                   <label className="font-mono text-xs uppercase text-craie/60 block">Email</label>
                   <input
                     type="email"
                     value={user?.email ?? ""}
                     disabled
-                    className="w-full border-2 border-encre/60 bg-nuit-pelouse/40 text-craie/40 px-3 py-2 text-sm cursor-not-allowed outline-none"
+                    className="w-full rounded-xl border border-craie/10 bg-nuit-pelouse/40 text-craie/40 px-3.5 py-2.5 text-sm cursor-not-allowed outline-none font-mono"
                   />
                   <p className="font-mono text-[10px] text-craie/30">L'email n'est pas modifiable.</p>
                 </div>
-                <div className="space-y-1">
+                <div className="space-y-1.5">
                   <label className="font-mono text-xs uppercase text-craie/60 block">Téléphone</label>
                   <input
                     type="tel"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     placeholder="+212 6 00 00 00 00"
-                    className="w-full border-2 border-encre/60 bg-nuit-pelouse text-craie px-3 py-2 text-sm outline-none focus:border-vert-projecteur"
+                    className="w-full rounded-xl border border-craie/15 bg-nuit-pelouse text-craie px-3.5 py-2.5 text-sm outline-none focus:border-vert-projecteur"
                   />
                 </div>
               </div>
 
-              <div className="space-y-1">
-                <label className="font-mono text-xs uppercase text-craie/60 block">Rôle actuel</label>
-                <div className="font-mono text-xs font-bold uppercase text-vert-projecteur px-3 py-2 bg-nuit-pelouse border-2 border-encre/60 w-fit">
-                  {user?.role}
-                </div>
+              <div className="pt-2">
+                <Button type="submit" variant="booking" loading={profileLoading} className="shadow-lg shadow-vert-projecteur/20">
+                  Enregistrer les modifications
+                </Button>
               </div>
-
-              <Button type="submit" variant="primary" loading={profileLoading} className="shadow-brutal">
-                Enregistrer les modifications
-              </Button>
             </form>
           </div>
 
           {/* Formulaire Modification du mot de passe */}
-          <div className="border-2 border-encre bg-encre p-6 shadow-brutal space-y-4">
-            <div className="flex items-center gap-2 border-b border-encre/60 pb-3">
-              <Lock size={20} weight="bold" className="text-orange-sifflet" />
-              <h2 className="font-mono text-sm font-bold uppercase tracking-wider text-craie">
-                Sécurité du compte (Mot de passe)
+          <div className="rounded-3xl border border-craie/10 bg-encre/80 backdrop-blur-xl p-6 sm:p-8 shadow-xl space-y-6">
+            <div className="flex items-center gap-2.5 border-b border-craie/10 pb-4">
+              <Lock size={22} weight="bold" className="text-orange-sifflet" />
+              <h2 className="font-display font-black text-xl uppercase tracking-wide text-craie">
+                Sécurité & Mot de passe
               </h2>
             </div>
 
             {passwordMsg && (
               <div
-                className={`p-3 border-2 font-mono text-xs flex items-center gap-2 ${
+                className={`p-4 rounded-2xl border font-mono text-xs flex items-center gap-2.5 ${
                   passwordMsg.error
-                    ? "border-orange-sifflet bg-orange-sifflet/10 text-orange-sifflet"
-                    : "border-vert-projecteur bg-vert-projecteur/10 text-vert-projecteur"
+                    ? "border-orange-sifflet/40 bg-orange-sifflet/10 text-orange-sifflet"
+                    : "border-vert-projecteur/40 bg-vert-projecteur/10 text-vert-projecteur"
                 }`}
               >
-                {passwordMsg.error ? <WarningCircle size={16} /> : <CheckCircle size={16} />}
-                <span>{passwordMsg.text}</span>
+                {passwordMsg.error ? <WarningCircle size={18} /> : <CheckCircle size={18} />}
+                <span className="font-sans text-sm">{passwordMsg.text}</span>
               </div>
             )}
 
             <form onSubmit={handlePasswordSubmit} className="space-y-4">
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 <label className="font-mono text-xs uppercase text-craie/60 block">Mot de passe actuel</label>
                 <input
                   type="password"
@@ -198,12 +202,12 @@ export default function ProfilPage() {
                   onChange={(e) => setCurrentPassword(e.target.value)}
                   required
                   placeholder="••••••••"
-                  className="w-full border-2 border-encre/60 bg-nuit-pelouse text-craie px-3 py-2 text-sm outline-none focus:border-vert-projecteur"
+                  className="w-full rounded-xl border border-craie/15 bg-nuit-pelouse text-craie px-3.5 py-2.5 text-sm outline-none focus:border-vert-projecteur"
                 />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1">
+                <div className="space-y-1.5">
                   <label className="font-mono text-xs uppercase text-craie/60 block">Nouveau mot de passe</label>
                   <input
                     type="password"
@@ -211,10 +215,10 @@ export default function ProfilPage() {
                     onChange={(e) => setNewPassword(e.target.value)}
                     required
                     placeholder="Min. 8 caractères"
-                    className="w-full border-2 border-encre/60 bg-nuit-pelouse text-craie px-3 py-2 text-sm outline-none focus:border-vert-projecteur"
+                    className="w-full rounded-xl border border-craie/15 bg-nuit-pelouse text-craie px-3.5 py-2.5 text-sm outline-none focus:border-vert-projecteur"
                   />
                 </div>
-                <div className="space-y-1">
+                <div className="space-y-1.5">
                   <label className="font-mono text-xs uppercase text-craie/60 block">Confirmer le mot de passe</label>
                   <input
                     type="password"
@@ -222,14 +226,16 @@ export default function ProfilPage() {
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     required
                     placeholder="Confirmer"
-                    className="w-full border-2 border-encre/60 bg-nuit-pelouse text-craie px-3 py-2 text-sm outline-none focus:border-vert-projecteur"
+                    className="w-full rounded-xl border border-craie/15 bg-nuit-pelouse text-craie px-3.5 py-2.5 text-sm outline-none focus:border-vert-projecteur"
                   />
                 </div>
               </div>
 
-              <Button type="submit" variant="secondary" loading={passwordLoading} className="shadow-brutal">
-                Mettre à jour le mot de passe
-              </Button>
+              <div className="pt-2">
+                <Button type="submit" variant="secondary" loading={passwordLoading} className="shadow-lg shadow-orange-sifflet/20">
+                  Mettre à jour le mot de passe
+                </Button>
+              </div>
             </form>
           </div>
         </div>

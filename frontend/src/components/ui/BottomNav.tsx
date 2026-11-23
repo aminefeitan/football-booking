@@ -48,8 +48,7 @@ function BottomNavContent() {
   } else {
     navItems = [
       { href: "/", icon: House, label: "Accueil" },
-      { href: "/terrains", icon: MagnifyingGlass, label: "Terrains" },
-      { href: "/auth", icon: User, label: "Connexion" },
+      { href: "/login", icon: User, label: "Connexion" },
     ];
   }
 

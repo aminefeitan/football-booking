@@ -64,8 +64,13 @@ export async function api<T>(path: string, options: Options = {}): Promise<T> {
 
   if (res.status === 401) {
     clearToken();
-    if (typeof window !== "undefined" && !window.location.pathname.startsWith("/auth")) {
-      window.location.href = "/auth";
+    if (
+      typeof window !== "undefined" &&
+      !window.location.pathname.startsWith("/login") &&
+      !window.location.pathname.startsWith("/register") &&
+      !window.location.pathname.startsWith("/auth")
+    ) {
+      window.location.href = "/login";
     }
   }
 
